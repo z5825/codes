@@ -89,7 +89,7 @@ class NormalTree(object):
 		elif len(siblings) == 0 and ndxInSib == -1:
 			ndxInSib = 0
 		return ndxInSib
-				
+
 	def	_updateIDDict(self, **kw):
 		''' 1. kw: newNode. 2. the ID identity is not checked here. It shall be checked before.'''
 		if 'newNode' in kw:
@@ -121,6 +121,7 @@ class NormalTree(object):
 					curNode.level = curNode.parent.level + 1
 				qu.popleft() 
 			self._last = curNode
+			self._last.next = None
 		elif 'insertedNode' in kw:
 			newNode = kw['insertedNode']
 			prevNode, nextNode = self._findNeighborNode(newNode)
@@ -136,7 +137,6 @@ class NormalTree(object):
 				curNode.ndx = curNode.prev.ndx + 1
 				curNode.level = curNode.parent.level + 1
 				curNode = curNode.next
-			# self._updateTreeInfo(newNode)
 
 	def _updateTreeInfo(self, fromNode):
 		''' to update level, width, cousins, XY...info of the tree since the fromNode.'''
@@ -188,6 +188,9 @@ class NormalTree(object):
 				self._updateDesendants(dNode)
 				downFromNode.descendants.extend(dNode.descendants)
 			downFromNode.descendants.append(dNode)
+
+	def isLeaf(self, node):
+		return (node.children == {})
 
 	def deleteDown(self, deleteID):
 		downFromNode = self.idDict[deleteID]
@@ -298,6 +301,20 @@ class BinSearchTree(NormalTree):
 		self._updateIDDict()
 		self._updateTreeInfo(self._root)
 
+	def _findClosest(self, node):
+		if 0 in node.children and 1 in node.children:
+			left, right = self.maxInBSTree(node.children[0]), self.minInBSTree(node.children[1])
+			if node.content - left.content <= right.content - node.content:
+				closest = left
+			else: closest = right
+		elif 0 in node.children:
+			closest = self.maxInBSTree(node.children[0])
+		elif 1 in node.children:
+			closest = self.minInBSTree(node.children[1])
+		else:
+			closest = None
+		return closest
+
 	def insertNode(self, value):
 		pa, n = self._findParentAndIndex(value)
 		insertNode = TreeNode(self.size + 1, value, parent = pa)
@@ -310,55 +327,67 @@ class BinSearchTree(NormalTree):
 		node, result = self._findParentAndIndex(value, True)
 		if result == 'found':
 			return node
-	
-	def _findClosest(self, node):
-		leftClosest, rightClosest = None, None
-		if node.children != {}:
-			if 0 in node.children:
-				leftClosest = node.children[0]
-				while 1 in leftClosest.children:
-					leftClosest = leftClosest.children[1]
-			if 1 in node.children:
-				rightClosest = node.children[1]
-				while 0 in rightClosest.children:
-					rightClosest = rightClosest.children[0]
-		return leftClosest, rightClosest
 
+	def maxInBSTree(self, subtree):
+		while 1 in subtree.children:
+			subtree = subtree.children[1]
+		return subtree
+
+	def minInBSTree(self, subtree):
+		while 0 in subtree.children:
+			subtree = subtree.children[0]
+		return subtree
+	
 	def deleteValue(self, value):
 		node = self.search(value)
 		child = None
 		if node is not None:
-			l, r = self._findClosest(node)
-			if l is None and r is None:
+			if node.children == {}:
 				del node.parent.children[node.ndxInSib]
 				del node
-			elif l is None:
-				toCopy = r
-				if 1 in r.children:
-					child = r.children[1]
-			elif r is None:
-				toCopy = l
-				if 0 in l.children:
-					child = l.children[0]
 			else:
-				if node.content - l.content <= r.content - node.content:
-					toCopy = l
-					if 0 in l.children:
-						child = l.children[0]
-				else: 
-					toCopy = r
-					if 1 in r.children:
-						child = r.children[1]
-		
-			node.content = toCopy.content
-			if child is not None:
-				child.parent = toCopy.parent
-				toCopy.parent.children[toCopy.ndxInSib] = child
-			del toCopy 
-			self._updateBFTLink(updateAll = True)
-			self._updateIDDict()
-			self._updateTreeInfo(self._root)
-			
+				closest = self._findClosest(node)
+				if 0 in closest.children:
+					child = closest.children[0]
+				elif 1 in closest.children:
+					child = closest.children[1]
+				node.content = closest.content
+				if child is not None:
+					child.parent = closest.parent
+					n = closest.ndxInSib
+					closest.parent.children[n] = child
+				else:
+					n = closest.ndxInSib
+					del closest.parent.children[n] 
+			del closest 
+		self._updateBFTLink(updateAll = True)
+		self._updateIDDict()
+		self._updateTreeInfo(self._root)
+
+	def genSortedSeq(self):
+		seq = []
+		self._recGenSortedSeq(self, self._root, seq)
+		return seq
+
+	def _recGenSortedSeq(self, node, seq):
+		if 0 in node.children:
+			self._recGenSortedSeq(node.children[0], seq)
+		else:
+			seq.append(node)
+			return
+		seq.append(node)
+		if 1 in node.children:
+			self._recGenSortedSeq(node.children[1], seq)
+		else:
+			seq.append(node)
+			return
+
+class AVLTree(BinSearchTree):
+	def __init__(self):
+		super().__init__()
+	
+	def balanceTree(self):
+
 class CompleteBinTreeByLink(NormalTree):
 	MAXNODE = 2
 	def __init__(self):
@@ -816,7 +845,7 @@ def testHeapTree():
 
 def testBSTree():
 	bsTree = BinSearchTree()
-	seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
+	seq = [7, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
 	bsTree.buildFromSeq(seq)
 	draw1 = DrawTreeByLink(bsTree)
 	# bsTree.insertNode(14)

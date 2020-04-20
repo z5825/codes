@@ -3,7 +3,7 @@ import tkinter.ttk as ttk
 import tkinter.messagebox as mbox
 import time
 
-import win32api,win32con
+# import win32api,win32con
 
 class BiTreeForTreeviewTTK(object):
 	def __init__(self, items):
@@ -45,23 +45,23 @@ class DrawTreeByLink(object):
 		self.bt1.pack(side = 'left')
 		self.bt2.pack(side = 'left')
 		
-		cx = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
-		cy = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
+		# cx = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
+		# cy = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
+		cx, cy = 1440, 900
+		self.baseSize = 40 * 1080/cx
 		self.zoomX, self.zoomY = self.tree.width/2 * 1440/cx, self.tree.height/2 * 720/cy
 		if self.tree.height > 5:	self.zoomY *= 0.7
 		if self.tree.width > 8:		self.zoomX *= 0.7
-		self.root.geometry('%dx%d+%d+%d' %(cx*self.zoomX*0.2, cy*self.zoomY*0.3, 100, 100))
+		self.root.geometry('%dx%d+%d+%d' %(cx*self.zoomX*0.2, cy*self.zoomY*0.3, 1000, 300))
 
 		self._drawCanvas()
 		self._drawNodesAndLines(fromNode = self.tree._root, toNode = self.tree._last)
-		# self.root.update()
 		self.bt1.waitvar(self.step)
+		# self.root.update()
 		# mbox.showinfo('', 'inited.')
 		# self.root.mainloop()
 
 	def _drawCanvas(self):
-	
-		self.baseSize = 40 
 		self.canvasWidth = self.baseSize * self.tree.width * self.zoomX * 1.5
 		self.canvasHeight = self.baseSize * (self.tree.height + 1)* self.zoomY
 		self.offset = self.baseSize // 2
@@ -100,9 +100,7 @@ class DrawTreeByLink(object):
 			return
 
 		# draw nodes:
-		n = 0
-		while n < len(drawList):
-			curNode = drawList[n]
+		for curNode in drawList:
 			if curNode.level == 1:
 				curNode.drawXY = 0.5 * self.canvasWidth, self.offset
 				curNode.drawWidth = self.canvasWidth
@@ -112,21 +110,8 @@ class DrawTreeByLink(object):
 					curNode.drawWidth = curNode.parent.drawWidth / (1 + tmp)
 				curNode.drawXY = curNode.parent.drawXY[0] - 1/2 * curNode.parent.drawWidth + \
 								(0.5 + curNode.ndxInSib) * curNode.drawWidth, \
-								(curNode.level-1)*self.baseSize*self.zoomY + self.offset			
-				if curNode.drawXY[1] == curNode.prev.drawXY[1] and \
-						curNode.drawXY[0] - curNode.prev.drawXY[0] < self.baseSize * 1.1:
-					curNode.drawXY = curNode.drawXY[0] + self.baseSize, curNode.drawXY[1]
-					self.canvasWidth += self.baseSize
-					if curNode.ndxInSib == 0: 
-						pmove = self.baseSize
-					else: pmove = self.baseSize/2
-					while curNode.parent != self.tree._root:
-						for sib in curNode.parent.siblings.values():
-							if sib.ndxInSib >= curNode.parent.ndxInSib:
-								sib.drawXY = sib.drawXY[0] + pmove, sib.drawXY[1]
-						curNode = curNode.parent
-			n += 1
-
+								(curNode.level-1)*self.baseSize*self.zoomY + self.offset
+								
 		for curNode in drawList:
 			if len(curNode.children) > 1:
 				x = 0
@@ -134,9 +119,9 @@ class DrawTreeByLink(object):
 					x += ch.drawXY[0]
 				curNode.drawXY = x/len(curNode.children), curNode.drawXY[1]
 			elif 0 in curNode.children:
-				curNode.drawXY = curNode.children[0].drawXY[0] + curNode.children[0].drawWidth, curNode.drawXY[1]
+				curNode.drawXY = curNode.children[0].drawXY[0] + curNode.children[0].drawWidth/2, curNode.drawXY[1]
 			elif 1 in curNode.children:
-				curNode.drawXY = curNode.children[1].drawXY[0] - curNode.children[1].drawWidth, curNode.drawXY[1]
+				curNode.drawXY = curNode.children[1].drawXY[0] - curNode.children[1].drawWidth/2, curNode.drawXY[1]
 
 		for curNode in drawList:
 			x1, y1 = curNode.drawXY
