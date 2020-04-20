@@ -845,7 +845,7 @@ def testBSTree():
 	bsTree = BinSearchTree()
 	seq = [7, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
 	bsTree.buildFromSeq(seq)
-	# draw1 = DrawTreeByLink(bsTree)
+	draw1 = DrawTreeByLink(bsTree)
 	# bsTree.insertNode(14)
 	# draw1.updateDrawing('redraw')
 	# input('search: 8')
@@ -857,10 +857,10 @@ def testBSTree():
 	# input('search: 30')
 	# result = bsTree.search(30)
 	# print(result)
-	# bsTree.deleteValue(9)
-	# draw1.updateDrawing('redraw')
-	# bsTree.deleteValue(19)
-	# draw1.updateDrawing('redraw')
+	bsTree.deleteValue(9)
+	draw1.updateDrawing('redraw')
+	bsTree.deleteValue(19)
+	draw1.updateDrawing('redraw')
 	seq = bsTree.genSortedSeq()
 	print(seq)
 
