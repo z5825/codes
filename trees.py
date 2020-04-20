@@ -383,8 +383,17 @@ class AVLTree(BinSearchTree):
 	def __init__(self):
 		super().__init__()
 	
-	def reBalanceAll(self):
-		pass
+	def rebuildAVLTree(self):
+		seq = self.genSortedSeq()
+		self._recRebuildAVLTree(0, len(seq) - 1, seq)
+
+	def _recRebuildAVLTree(self, lNdx, rNdx, seq):
+		newTree = AVLTree()
+		mNdx = (lNdx + rNdx) // 2
+		if rNdx - lNdx == 1:
+			left = TreeNode(0, seq[lNdx])
+			mid = TreeNode(0, seq[rNdx])
+			
 
 class CompleteBinTreeByLink(NormalTree):
 	MAXNODE = 2
