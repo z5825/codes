@@ -90,6 +90,21 @@ class NormalTree(object):
 			ndxInSib = 0
 		return ndxInSib
 
+	def _updateAndRefreshIDs(self):
+		addvalue = 1
+		IDs = []
+		curNode = self._root
+		while curNode is not None:
+			IDs.append(curNode.nodeID)
+			curNode = curNode.next
+		curNode = self._root
+		while curNode is not None:
+			while curNode.nodeID in IDs:
+				curNode.nodeID += addvalue
+			IDs.append(curNode.nodeID)
+			addvalue += 1
+			curNode = curNode.next
+
 	def	_updateIDDict(self, **kw):
 		''' 1. kw: newNode. 2. the ID identity is not checked here. It shall be checked before.'''
 		if 'newNode' in kw:
@@ -370,30 +385,43 @@ class BinSearchTree(NormalTree):
 		return seq
 
 	def _recGenSortedSeq(self, node, seq):
-		if 0 in node.children:
-			self._recGenSortedSeq(node.children[0], seq)
-		else:
-			seq.append(node.content)
-			return
+		if 0 in node.children:	self._recGenSortedSeq(node.children[0], seq)
 		seq.append(node.content)
-		if 1 in node.children:
-			self._recGenSortedSeq(node.children[1], seq)
-
+		if 1 in node.children:	self._recGenSortedSeq(node.children[1], seq)
+		
 class AVLTree(BinSearchTree):
 	def __init__(self):
 		super().__init__()
 	
 	def rebuildAVLTree(self):
 		seq = self.genSortedSeq()
-		self._recRebuildAVLTree(0, len(seq) - 1, seq)
+		newTree = AVLTree()
+		newTree._root = self._recRebuildAVLTree(0, len(seq) - 1, seq)
+		newTree._updateBFTLink(updateAll = True)
+		newTree._updateAndRefreshIDs()
+		newTree._updateIDDict()
+		newTree._updateTreeInfo(newTree._root)
+		return newTree
 
 	def _recRebuildAVLTree(self, lNdx, rNdx, seq):
-		newTree = AVLTree()
 		mNdx = (lNdx + rNdx) // 2
-		if rNdx - lNdx == 1:
-			left = TreeNode(0, seq[lNdx])
-			mid = TreeNode(0, seq[rNdx])
-			
+		if rNdx == lNdx:
+			mid = TreeNode(0, seq[mNdx])
+		elif rNdx - lNdx == 1:
+			mid, right = (TreeNode(0, x) for x in (seq[mNdx], seq[rNdx]))
+			mid.children[1] = right
+			right.parent = mid
+		elif rNdx - lNdx == 2:
+			left, mid, right = (TreeNode(0, x) for x in (seq[lNdx], seq[mNdx], seq[rNdx]))
+			mid.children[0], mid.children[1] = left, right
+			left.parent = right.parent = mid
+		else:
+			left = self._recRebuildAVLTree(lNdx, mNdx - 1, seq)
+			right = self._recRebuildAVLTree(mNdx + 1, rNdx, seq)
+			mid = TreeNode(0, seq[mNdx])
+			mid.children[0], mid.children[1] = left, right
+			left.parent = right.parent = mid
+		return mid
 
 class CompleteBinTreeByLink(NormalTree):
 	MAXNODE = 2
@@ -853,32 +881,42 @@ def testHeapTree():
 def testBSTree():
 	bsTree = BinSearchTree()
 	seq = [7, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
+	seq = [x for x in range(20, 0, -1)]
 	bsTree.buildFromSeq(seq)
-	draw1 = DrawTreeByLink(bsTree)
-	# bsTree.insertNode(14)
+	# draw1 = DrawTreeByLink(bsTree)
+	# # bsTree.insertNode(14)
+	# # draw1.updateDrawing('redraw')
+	# # input('search: 8')
+	# # result = bsTree.search(8)
+	# # print(result)
+	# # input('search: 9')
+	# # result = bsTree.search(9)
+	# # print(result)
+	# # input('search: 30')
+	# # result = bsTree.search(30)
+	# # print(result)
+	# bsTree.deleteValue(9)
 	# draw1.updateDrawing('redraw')
-	# input('search: 8')
-	# result = bsTree.search(8)
-	# print(result)
-	# input('search: 9')
-	# result = bsTree.search(9)
-	# print(result)
-	# input('search: 30')
-	# result = bsTree.search(30)
-	# print(result)
-	bsTree.deleteValue(9)
-	draw1.updateDrawing('redraw')
-	bsTree.deleteValue(19)
-	draw1.updateDrawing('redraw')
+	# bsTree.deleteValue(19)
+	# draw1.updateDrawing('redraw')
 	seq = bsTree.genSortedSeq()
 	print(seq)
 
-
+def testAVLTree():
+	avlTree = AVLTree()
+	# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
+	# seq = [4, 5, 7, 6, 3, 25, 20, 27, 13, 11, 9, 9, 37, 0, 19, 42, 13, 13, 20, 10]
+	seq = [x for x in range(20)]
+	avlTree.buildFromSeq(seq)
+	draw1 = DrawTreeByLink(avlTree)
+	newTree = avlTree.rebuildAVLTree()
+	draw2 = DrawTreeByLink(newTree)
 
 # testBinTree()
 # testNormalTree()
 # testExpTree()
 # testHeapTree()
-testBSTree()
+# testBSTree()
+testAVLTree()
 
 
