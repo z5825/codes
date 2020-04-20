@@ -52,7 +52,7 @@ class DrawTreeByLink(object):
 		self.zoomX, self.zoomY = self.tree.width/2 * 1440/cx, self.tree.height/2 * 720/cy
 		if self.tree.height > 5:	self.zoomY *= 0.7
 		if self.tree.width > 8:		self.zoomX *= 0.7
-		self.root.geometry('%dx%d+%d+%d' %(cx*self.zoomX*0.2, cy*self.zoomY*0.3, 1000, 300))
+		self.root.geometry('%dx%d+%d+%d' %(cx*self.zoomX*0.2, cy*self.zoomY*0.3, 500, 300))
 
 		self._drawCanvas()
 		self._drawNodesAndLines(fromNode = self.tree._root, toNode = self.tree._last)
