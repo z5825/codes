@@ -344,6 +344,7 @@ class BinSearchTree(NormalTree):
 		self._updateBFTLink(insertedNode = insertNode)
 		self._updateIDDict(newNode = insertNode)
 		self._updateTreeInfo(updateFromNode = insertNode)
+		return insertNode
 	
 	def search(self, value):
 		node, result = self._findParentAndIndex(value, True)
@@ -433,7 +434,22 @@ class AVLTree(BinSearchTree):
 	def deleteNode(self, delValue):
 		pass
 
-	def _heightOfSubtree(self, node):
+	def insertNodeAVL(self, value):
+		pa, n = self._findParentAndIndex(value)
+		insertNode = TreeNodeInAVL(self.size + 1, value, parent = pa)
+		pa.children[n] = insertNode
+		if len(insertNode.siblings) == 1:   
+			curNode = pa
+			curNode.needUpdate = True
+			while loop:
+				if curNode != self._root:
+					if curNode.ubf > 1:
+						if 1 not in curNode.children:
+							curNode.children.parent = curNode.parent 
+					elif curNode.ubf < -1: 
+						
+					else:
+						curNode = curNode.parent
 
 class CompleteBinTreeByLink(NormalTree):
 	MAXNODE = 2
@@ -827,24 +843,29 @@ class TreeNodeInAVL(TreeNode):
 	def __init__(self, nodeID = -1, content = None, **kw):
 		super().__init__(nodeID, content, **kw)
 		self._height = None
-		self.ubf = None  # unbalanced factor: = height of left subtree - height of right subtree
-		self.toFresh = True
+		self._ubf = None  # unbalanced factor: = height of left subtree - height of right subtree
+		self.needUpdate = True
 
 	@property
 	def height(self):
-		if self._height is not None:
-			if self.toFresh == False:
-				return self._height
-		if self.children == {}:
-			return 1
-		else:
-			h = []
-			for ch in self.children.values():
-				h.append(ch.height)
-			self._height = max(h) + 1
+		if self._height is None or self.needUpdate == True:
+			if self.children == {}:
+				self._height = 1
+			else:
+				h = []
+				for ch in self.children.values():
+					h.append(ch.height)
+				self._height = max(h) + 1
+			self.needUpdate = False
 		return self._height
 
-
+	@property
+	def ubf(self):
+		if self._ubf is None or self.needUpdate == True:
+			lh = self.children[0].height if 0 in self.children else 0
+			rh = self.children[1].height if 1 in self.children else 0
+			self._ubf = lh - rh
+		return self._ubf
 	
 
 def testBinTree():
