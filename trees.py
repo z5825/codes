@@ -153,8 +153,15 @@ class NormalTree(object):
 				curNode.level = curNode.parent.level + 1
 				curNode = curNode.next
 
-	def _updateTreeInfo(self, fromNode):
-		''' to update level, width, cousins, XY...info of the tree since the fromNode.'''
+	def _updateTreeInfo(self, **kw):
+		''' kw: updateAll, updateFromNode, updateFromNodeID'''
+		if 'updateAll' in kw:
+			fromNode = self._root
+		elif 'updateFromNode' in kw:
+			fromNode = kw['updateFromNode']
+		elif 'updateFromNodeID' in kw:
+			fromNode = self.idDict[kw['updateFromNodeID']]
+		else: return
 		self.height = self._last.level
 		curNode = fromNode
 		while curNode.prev is not None and curNode.prev.level == curNode.level:
@@ -222,7 +229,7 @@ class NormalTree(object):
 		else: 
 			del self
 		self._updateBFTLink(updateAll = True)
-		self._updateTreeInfo(self._root)
+		self._updateTreeInfo(updateAll = True)
 			
 	def insert(self, parentID, insertID, content, **kw):
 		'''1. ID shall be unique, otherwise it will be modified.
@@ -269,8 +276,8 @@ class NormalTree(object):
 		
 		toTree._updateBFTLink(updateAll = True)
 		self._updateBFTLink(updateAll = True)
-		toTree._updateTreeInfo(toTree._root)
-		self._updateTreeInfo(self._root)
+		toTree._updateTreeInfo(updateAll = True)
+		self._updateTreeInfo(updateAll = True)
 
 	@property
 	def size(self):
@@ -314,7 +321,7 @@ class BinSearchTree(NormalTree):
 			pa.children[n] = insertNode
 		self._updateBFTLink(updateAll = True)
 		self._updateIDDict()
-		self._updateTreeInfo(self._root)
+		self._updateTreeInfo(updateAll = True)
 
 	def _findClosest(self, node):
 		if 0 in node.children and 1 in node.children:
@@ -336,7 +343,8 @@ class BinSearchTree(NormalTree):
 		pa.children[n] = insertNode
 		self._updateBFTLink(insertedNode = insertNode)
 		self._updateIDDict(newNode = insertNode)
-		self._updateTreeInfo(insertNode)
+		self._updateTreeInfo(updateFromNode = insertNode)
+		return insertNode
 	
 	def search(self, value):
 		node, result = self._findParentAndIndex(value, True)
@@ -377,7 +385,7 @@ class BinSearchTree(NormalTree):
 			del closest 
 		self._updateBFTLink(updateAll = True)
 		self._updateIDDict()
-		self._updateTreeInfo(self._root)
+		self._updateTreeInfo(updateAll = True)
 
 	def genSortedSeq(self):
 		seq = []
@@ -393,35 +401,67 @@ class AVLTree(BinSearchTree):
 	def __init__(self):
 		super().__init__()
 	
-	def rebuildAVLTree(self):
+	def reshapeAVL(self):
 		seq = self.genSortedSeq()
 		newTree = AVLTree()
-		newTree._root = self._recRebuildAVLTree(0, len(seq) - 1, seq)
+		newTree._root = self._recReshapeAVL(0, len(seq) - 1, seq)
 		newTree._updateBFTLink(updateAll = True)
 		newTree._updateAndRefreshIDs()
 		newTree._updateIDDict()
-		newTree._updateTreeInfo(newTree._root)
+		newTree._updateTreeInfo(updateAll = True)
 		return newTree
 
-	def _recRebuildAVLTree(self, lNdx, rNdx, seq):
+	def _recReshapeAVL(self, lNdx, rNdx, seq):
 		mNdx = (lNdx + rNdx) // 2
 		if rNdx == lNdx:
-			mid = TreeNode(0, seq[mNdx])
+			mid = TreeNodeInAVL(0, seq[mNdx])
 		elif rNdx - lNdx == 1:
-			mid, right = (TreeNode(0, x) for x in (seq[mNdx], seq[rNdx]))
+			mid, right = (TreeNodeInAVL(0, x) for x in (seq[mNdx], seq[rNdx]))
 			mid.children[1] = right
 			right.parent = mid
 		elif rNdx - lNdx == 2:
-			left, mid, right = (TreeNode(0, x) for x in (seq[lNdx], seq[mNdx], seq[rNdx]))
+			left, mid, right = (TreeNodeInAVL(0, x) for x in (seq[lNdx], seq[mNdx], seq[rNdx]))
 			mid.children[0], mid.children[1] = left, right
 			left.parent = right.parent = mid
 		else:
-			left = self._recRebuildAVLTree(lNdx, mNdx - 1, seq)
-			right = self._recRebuildAVLTree(mNdx + 1, rNdx, seq)
-			mid = TreeNode(0, seq[mNdx])
+			left = self._recReshapeAVL(lNdx, mNdx - 1, seq)
+			right = self._recReshapeAVL(mNdx + 1, rNdx, seq)
+			mid = TreeNodeInAVL(0, seq[mNdx])
 			mid.children[0], mid.children[1] = left, right
 			left.parent = right.parent = mid
 		return mid
+
+	def deleteNode(self, delValue):
+		pass
+
+	def insertNodeAVL(self, value):
+		curNode, n = self._findParentAndIndex(value)
+		insertNode = TreeNodeInAVL(self.size + 1, value, parent = curNode)
+		curNode.children[n] = insertNode
+		curNode.needUpdate = True
+		if len(curNode.children) == 1:   
+			while curNode != self._root:
+				pa = curNode.parent
+				pa.needUpdate = True
+				if -1 <= pa.ubf <= 1:
+					curNode = pa
+				else:
+					if pa.ubf > 1:
+						if len(pa.children) == 1:
+							self._reArrange3Nodes(pa, curNode, insertNode)
+
+					elif curNode.ubf < -1: 
+						
+					else:
+						curNode = pa
+
+	def _reArrange3Nodes(self, pa, curNode, leaf):
+		min_, mid_, max_ = sorted(pa.content, curNode.content, leaf.content)
+		newNode = TreeNodeInAVL(parent = pa)
+		pa.children[(1-curNode.ndxInSib)] = newNode
+		curNode.children = {}
+		pa.children[0].content, pa.content, pa.children[1].content = min_, mid_, max_
+		del leaf
 
 class CompleteBinTreeByLink(NormalTree):
 	MAXNODE = 2
@@ -453,7 +493,7 @@ class CompleteBinTreeByLink(NormalTree):
 			else: 
 				qu.popleft()
 		self._updateIDDict()
-		self._updateTreeInfo(self._root)
+		self._updateTreeInfo(updateAll = True)
 
 	def append(self, *allContent):
 		for content in allContent:
@@ -472,7 +512,7 @@ class CompleteBinTreeByLink(NormalTree):
 			self._last.next.prev = self._last
 			self._last = newNode
 			self._size += 1
-			self._updateTreeInfo(self._last)
+			self._updateTreeInfo(updateFromNode = self._last)
 
 	def deleteAndMove(self, **kw):
 		''' kw: ID, node, fromNode, toNode, fromID, toID '''
@@ -503,7 +543,7 @@ class CompleteBinTreeByLink(NormalTree):
 				self._last.next = None
 				loop = False
 
-		self._updateTreeInfo(prevOfDeleted)
+		self._updateTreeInfo(updateFromNode = prevOfDeleted)
 
 	def _isPerfectBTree(self):
 		return (self._last.ndx & (self._last.ndx + 1) == 0) 
@@ -600,7 +640,7 @@ class ExpressionTree(NormalTree):
 					curNode = self._moveDown(curNode, False, True)
 		self._updateBFTLink(updateAll = True)
 		self._updateIDDict()
-		self._updateTreeInfo(self._root)
+		self._updateTreeInfo(updateAll = True)
 
 	def evaluate(self, fromNode):
 		elements = []
@@ -730,6 +770,7 @@ class TreeNode(object):
 			self.parent = None
 			self._level = 1
 		self.descendants = []
+		self.needUpdate = True
 
 	def __str__(self):
 		if type(self.content) == int:
@@ -756,14 +797,15 @@ class TreeNode(object):
 	
 	@property
 	def level(self):
-		if self._level is not None:
-			return self._level
-		else:
-			return self.parent.level + 1
+		if self._level is None or self.needUpdate == True:
+			self._level = self.parent.level + 1 
+			self.needUpdate = False
+		return self._level
 
 	@level.setter
 	def level(self, value):
 		self._level = value
+		self.needUpdate = False
 
 class TreeNodeInList(object):
 	def __init__(self, inTree, nodeID = -1, content = None, **kw):
@@ -810,6 +852,35 @@ class TreeNodeInList(object):
 		elif self.ndx == self.parent.ndx * 2 and self.ndx - 1 >= 0:
 			return self.inTree(self.ndx - 1)
 		else: return None
+
+class TreeNodeInAVL(TreeNode):
+	def __init__(self, nodeID = -1, content = None, **kw):
+		super().__init__(nodeID, content, **kw)
+		self._height = None
+		self._ubf = None  # unbalanced factor: = height of left subtree - height of right subtree
+		self.needUpdate = True
+
+	@property
+	def height(self):
+		if self._height is None or self.needUpdate == True:
+			if self.children == {}:
+				self._height = 1
+			else:
+				h = []
+				for ch in self.children.values():
+					h.append(ch.height)
+				self._height = max(h) + 1
+			self.needUpdate = False
+		return self._height
+
+	@property
+	def ubf(self):
+		if self._ubf is None or self.needUpdate == True:
+			lh = self.children[0].height if 0 in self.children else 0
+			rh = self.children[1].height if 1 in self.children else 0
+			self._ubf = lh - rh
+		return self._ubf
+	
 
 def testBinTree():
 	tree1 = CompleteBinTreeByLink()
@@ -905,11 +976,11 @@ def testBSTree():
 def testAVLTree():
 	avlTree = AVLTree()
 	# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
-	# seq = [4, 5, 7, 6, 3, 25, 20, 27, 13, 11, 9, 9, 37, 0, 19, 42, 13, 13, 20, 10]
-	seq = [x for x in range(20)]
+	seq = [4, 5, 7, 6, 3, 25, 20, 27, 13, 11, 9, 9, 37, 0, 19, 42, 13]
+	# seq = [x for x in range(20)]
 	avlTree.buildFromSeq(seq)
 	draw1 = DrawTreeByLink(avlTree)
-	newTree = avlTree.rebuildAVLTree()
+	newTree = avlTree.reshapeAVL()
 	draw2 = DrawTreeByLink(newTree)
 
 # testBinTree()
