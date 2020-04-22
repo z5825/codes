@@ -449,11 +449,12 @@ class AVLTree(BinSearchTree):
 					if pa.ubf > 1:
 						if len(pa.children) == 1:
 							self._reArrange3Nodes(pa, curNode, insertNode)
-
-					elif curNode.ubf < -1: 
-						
-					else:
-						curNode = pa
+							break
+					elif pa.ubf < -1: 
+						pass
+		self._updateBFTLink(insertedNode = insertNode)
+		self._updateIDDict(newNode = insertNode)
+		self._updateTreeInfo(updateFromNode = insertNode)
 
 	def _reArrange3Nodes(self, pa, curNode, leaf):
 		min_, mid_, max_ = sorted(pa.content, curNode.content, leaf.content)
@@ -858,7 +859,6 @@ class TreeNodeInAVL(TreeNode):
 		super().__init__(nodeID, content, **kw)
 		self._height = None
 		self._ubf = None  # unbalanced factor: = height of left subtree - height of right subtree
-		self.needUpdate = True
 
 	@property
 	def height(self):
@@ -976,12 +976,14 @@ def testBSTree():
 def testAVLTree():
 	avlTree = AVLTree()
 	# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
-	seq = [4, 5, 7, 6, 3, 25, 20, 27, 13, 11, 9, 9, 37, 0, 19, 42, 13]
+	seq = [x*2 for x in range(19)]
 	# seq = [x for x in range(20)]
 	avlTree.buildFromSeq(seq)
-	draw1 = DrawTreeByLink(avlTree)
+	# draw1 = DrawTreeByLink(avlTree)
 	newTree = avlTree.reshapeAVL()
 	draw2 = DrawTreeByLink(newTree)
+	newTree.insertNodeAVL(15)
+	draw2.updateDrawing('redraw')
 
 # testBinTree()
 # testNormalTree()
