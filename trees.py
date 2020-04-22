@@ -452,12 +452,12 @@ class AVLTree(BinSearchTree):
 							break
 					elif pa.ubf < -1: 
 						pass
-		self._updateBFTLink(insertedNode = insertNode)
+		self._updateBFTLink(updateAll = True)
 		self._updateIDDict(newNode = insertNode)
 		self._updateTreeInfo(updateFromNode = insertNode)
 
 	def _reArrange3Nodes(self, pa, curNode, leaf):
-		min_, mid_, max_ = sorted(pa.content, curNode.content, leaf.content)
+		min_, mid_, max_ = sorted((pa.content, curNode.content, leaf.content))
 		newNode = TreeNodeInAVL(parent = pa)
 		pa.children[(1-curNode.ndxInSib)] = newNode
 		curNode.children = {}
@@ -800,13 +800,14 @@ class TreeNode(object):
 	def level(self):
 		if self._level is None or self.needUpdate == True:
 			self._level = self.parent.level + 1 
-			self.needUpdate = False
+			# self.needUpdate = False
 		return self._level
 
 	@level.setter
 	def level(self, value):
 		self._level = value
 		self.needUpdate = False
+	
 
 class TreeNodeInList(object):
 	def __init__(self, inTree, nodeID = -1, content = None, **kw):
@@ -870,7 +871,7 @@ class TreeNodeInAVL(TreeNode):
 				for ch in self.children.values():
 					h.append(ch.height)
 				self._height = max(h) + 1
-			self.needUpdate = False
+			# self.needUpdate = False
 		return self._height
 
 	@property
@@ -976,13 +977,14 @@ def testBSTree():
 def testAVLTree():
 	avlTree = AVLTree()
 	# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
-	seq = [x*2 for x in range(19)]
+	seq = [x*2 for x in range(15)]
 	# seq = [x for x in range(20)]
 	avlTree.buildFromSeq(seq)
 	# draw1 = DrawTreeByLink(avlTree)
 	newTree = avlTree.reshapeAVL()
 	draw2 = DrawTreeByLink(newTree)
-	newTree.insertNodeAVL(15)
+	newTree.insertNodeAVL(7)
+	newTree.insertNodeAVL(6.5)
 	draw2.updateDrawing('redraw')
 
 # testBinTree()
