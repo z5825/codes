@@ -1,7 +1,7 @@
 from math import log2
 from random import randint
 from collections import deque
-import time
+# import time
 
 from tktree import DrawTreeByLink, DrawTreeByList
 
@@ -446,15 +446,65 @@ class AVLTree(BinSearchTree):
 				if -1 <= pa.ubf <= 1:
 					curNode = pa
 				else:
-					if pa.ubf > 1:
-						if len(pa.children) == 1:
-							self._reArrange3Nodes(pa, curNode, insertNode)
-							break
-					elif pa.ubf < -1: 
-						pass
+					centerIndex = 1 if pa.ubf > 1 else 0
+
+					if curNode.ubf * pa.ubf > 0:
+						self._adjust(curNode, pa, centerIndex, style = 'A')
+						break
+					else:
+						self._adjust(curNode, pa, centerIndex, style = 'B')
+						break
+					# if pa.ubf > 1:
+					# 	if len(pa.children) == 1:
+					# 		self._reArrange3Nodes(pa, curNode, insertNode)
+					# 		break
+					# elif pa.ubf < -1: 
+					# 	if len(pa.children) == 1:
+					# 		self._reArrange3Nodes(pa, curNode, insertNode)
+					# 		break
 		self._updateBFTLink(updateAll = True)
-		self._updateIDDict(newNode = insertNode)
-		self._updateTreeInfo(updateFromNode = insertNode)
+		self._updateIDDict()
+		# self._updateIDDict(newNode = insertNode)
+		# self._updateTreeInfo(updateFromNode = insertNode)
+		self._updateTreeInfo(updateAll = True)
+
+	def _adjust(self, curNode, pa, centerIndex, *, style):
+		if centerIndex in curNode.children:
+			centerSubtree = curNode.children[centerIndex]
+		else: centerSubtree = None
+		if style == 'A':
+			curNode.parent = pa.parent
+			if pa.parent is not None:
+				pa.parent.children[pa.ndxInSib] = curNode
+
+			curNode.children[centerIndex] = pa
+			pa.parent = curNode
+			if centerSubtree is not None:
+				pa.children[1-centerIndex] = centerSubtree
+				centerSubtree.parent = pa
+			else:
+				del pa.children[1-centerIndex]
+		elif style == 'B':
+			twoBranches = (centerSubtree.children[0] if 0 in centerSubtree.children else None, 
+							centerSubtree.children[1] if 1 in centerSubtree.children else None)
+			
+			if pa.parent is not None:
+				pa.parent.children[pa.ndxInSib] = centerSubtree
+			centerSubtree.parent = pa.parent
+
+			n = curNode.ndxInSib   # to decide if the tree is left high or right high. 0 will equal to left higher, else 1.
+			pa.parent = curNode.parent = centerSubtree
+			centerSubtree.children[n], centerSubtree.children[1-n] = curNode, pa
+			if twoBranches[n] is not None:
+				curNode.children[1-n] = twoBranches[n]
+				twoBranches[n].parent = curNode
+			else:
+				del curNode.children[1-n]
+			if twoBranches[1-n] is not None:
+				pa.children[n] = twoBranches[1-n]
+				twoBranches[1-n].parent = pa
+			else:
+				del pa.children[n]
 
 	def _reArrange3Nodes(self, pa, curNode, leaf):
 		min_, mid_, max_ = sorted((pa.content, curNode.content, leaf.content))
@@ -977,15 +1027,25 @@ def testBSTree():
 def testAVLTree():
 	avlTree = AVLTree()
 	# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
-	seq = [x*2 for x in range(15)]
+	seq = [x*2 for x in range(10)]
 	# seq = [x for x in range(20)]
 	avlTree.buildFromSeq(seq)
 	# draw1 = DrawTreeByLink(avlTree)
 	newTree = avlTree.reshapeAVL()
 	draw2 = DrawTreeByLink(newTree)
-	newTree.insertNodeAVL(7)
-	newTree.insertNodeAVL(6.5)
+	newTree.insertNodeAVL(15)
+	newTree.insertNodeAVL(17)
+	newTree.insertNodeAVL(19)
 	draw2.updateDrawing('redraw')
+	newTree.insertNodeAVL(20)
+	draw2.updateDrawing('redraw')
+	newTree.insertNodeAVL(16.5)
+	draw2.updateDrawing('redraw')
+	# newTree.insertNodeAVL(1)
+	# newTree.insertNodeAVL(0.5)
+	# draw2.updateDrawing('redraw')
+	# newTree.insertNodeAVL(1.5)
+	# draw2.updateDrawing('redraw')
 
 # testBinTree()
 # testNormalTree()
