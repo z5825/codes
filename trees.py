@@ -1,7 +1,7 @@
 from math import log2
 from random import randint
 from collections import deque
-import time
+# import time
 
 from tktree import DrawTreeByLink, DrawTreeByList
 
@@ -106,12 +106,12 @@ class NormalTree(object):
 			curNode = curNode.next
 
 	def	_updateIDDict(self, **kw):
-		''' 1. kw: newNode. 2. the ID identity is not checked here. It shall be checked before.'''
+		''' 1. kw: newNode or updateAll. 2. the ID identity is not checked here. It shall be checked before.'''
 		if 'newNode' in kw:
 			newNode = kw['newNode']
 			id = newNode.nodeID
 			self.idDict[id] = newNode
-		else:
+		elif 'updateAll' in kw:
 			self.idDict = {}
 			curNode = self._root
 			while curNode is not None:
@@ -320,7 +320,7 @@ class BinSearchTree(NormalTree):
 			insertNode = TreeNode(i, seq[i], parent = pa)
 			pa.children[n] = insertNode
 		self._updateBFTLink(updateAll = True)
-		self._updateIDDict()
+		self._updateIDDict(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
 
 	def _findClosest(self, node):
@@ -384,7 +384,7 @@ class BinSearchTree(NormalTree):
 					del closest.parent.children[n] 
 			del closest 
 		self._updateBFTLink(updateAll = True)
-		self._updateIDDict()
+		self._updateIDDict(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
 
 	def genSortedSeq(self):
@@ -407,7 +407,7 @@ class AVLTree(BinSearchTree):
 		newTree._root = self._recReshapeAVL(0, len(seq) - 1, seq)
 		newTree._updateBFTLink(updateAll = True)
 		newTree._updateAndRefreshIDs()
-		newTree._updateIDDict()
+		newTree._updateIDDict(updateAll = True)
 		newTree._updateTreeInfo(updateAll = True)
 		return newTree
 
@@ -446,23 +446,54 @@ class AVLTree(BinSearchTree):
 				if -1 <= pa.ubf <= 1:
 					curNode = pa
 				else:
-					if pa.ubf > 1:
-						if len(pa.children) == 1:
-							self._reArrange3Nodes(pa, curNode, insertNode)
-							break
-					elif pa.ubf < -1: 
-						pass
-		self._updateBFTLink(insertedNode = insertNode)
-		self._updateIDDict(newNode = insertNode)
-		self._updateTreeInfo(updateFromNode = insertNode)
+					centerIndex = 1 if pa.ubf > 1 else 0
+					if curNode.ubf * pa.ubf > 0:
+						self._adjust(curNode, pa, centerIndex, style = 'A')
+					else:
+						self._adjust(curNode, pa, centerIndex, style = 'B')
+					break
+					
+		self._updateBFTLink(updateAll = True)
+		self._updateIDDict(updateAll = True)
+		self._updateTreeInfo(updateAll = True)
 
-	def _reArrange3Nodes(self, pa, curNode, leaf):
-		min_, mid_, max_ = sorted(pa.content, curNode.content, leaf.content)
-		newNode = TreeNodeInAVL(parent = pa)
-		pa.children[(1-curNode.ndxInSib)] = newNode
-		curNode.children = {}
-		pa.children[0].content, pa.content, pa.children[1].content = min_, mid_, max_
-		del leaf
+	def _adjust(self, curNode, pa, centerIndex, *, style):
+		if centerIndex in curNode.children:
+			centerSubtree = curNode.children[centerIndex]
+		else: centerSubtree = None
+		if style == 'A':
+			curNode.parent = pa.parent
+			if pa != self._root:
+				pa.parent.children[pa.ndxInSib] = curNode
+			else: self._root = curNode
+
+			curNode.children[centerIndex] = pa
+			pa.parent = curNode
+			if centerSubtree is not None:
+				pa.children[1-centerIndex] = centerSubtree
+				centerSubtree.parent = pa
+			else: del pa.children[1-centerIndex]
+		elif style == 'B':
+			twoBranches = (centerSubtree.children[0] if 0 in centerSubtree.children else None, 
+							centerSubtree.children[1] if 1 in centerSubtree.children else None)
+			
+			if pa.parent is not None:
+				pa.parent.children[pa.ndxInSib] = centerSubtree
+			centerSubtree.parent = pa.parent
+
+			n = curNode.ndxInSib   # to decide if the tree is left high or right high. 0 will equal to left higher, else 1.
+			pa.parent = curNode.parent = centerSubtree
+			centerSubtree.children[n], centerSubtree.children[1-n] = curNode, pa
+			if twoBranches[n] is not None:
+				curNode.children[1-n] = twoBranches[n]
+				twoBranches[n].parent = curNode
+			else:
+				del curNode.children[1-n]
+			if twoBranches[1-n] is not None:
+				pa.children[n] = twoBranches[1-n]
+				twoBranches[1-n].parent = pa
+			else:
+				del pa.children[n]
 
 class CompleteBinTreeByLink(NormalTree):
 	MAXNODE = 2
@@ -493,7 +524,7 @@ class CompleteBinTreeByLink(NormalTree):
 				n += 1
 			else: 
 				qu.popleft()
-		self._updateIDDict()
+		self._updateIDDict(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
 
 	def append(self, *allContent):
@@ -640,7 +671,7 @@ class ExpressionTree(NormalTree):
 				else:
 					curNode = self._moveDown(curNode, False, True)
 		self._updateBFTLink(updateAll = True)
-		self._updateIDDict()
+		self._updateIDDict(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
 
 	def evaluate(self, fromNode):
@@ -785,6 +816,7 @@ class TreeNode(object):
 		for k in _siblings.keys():
 			if _siblings[k] == self:
 				self._ndxInSib = k
+				break
 		return self._ndxInSib
 
 	@ndxInSib.setter
@@ -807,6 +839,7 @@ class TreeNode(object):
 	def level(self, value):
 		self._level = value
 		self.needUpdate = False
+	
 
 class TreeNodeInList(object):
 	def __init__(self, inTree, nodeID = -1, content = None, **kw):
@@ -870,7 +903,7 @@ class TreeNodeInAVL(TreeNode):
 				for ch in self.children.values():
 					h.append(ch.height)
 				self._height = max(h) + 1
-			self.needUpdate = False
+			# self.needUpdate = False
 		return self._height
 
 	@property
@@ -976,14 +1009,31 @@ def testBSTree():
 def testAVLTree():
 	avlTree = AVLTree()
 	# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
-	seq = [x*2 for x in range(19)]
+	seq = [x*2 for x in range(10)]
 	# seq = [x for x in range(20)]
 	avlTree.buildFromSeq(seq)
 	# draw1 = DrawTreeByLink(avlTree)
 	newTree = avlTree.reshapeAVL()
 	draw2 = DrawTreeByLink(newTree)
-	newTree.insertNodeAVL(15)
+	for x in range(21, 24):
+		newTree.insertNodeAVL(x)
 	draw2.updateDrawing('redraw')
+
+	newTree.insertNodeAVL(24)
+	draw2.updateDrawing('redraw')
+	# for x in range(26, 27):
+	# 	newTree.insertNodeAVL(x)
+	# newTree.insertNodeAVL(22)
+	# newTree.insertNodeAVL(23)
+	# draw2.updateDrawing('redraw')
+	# newTree.insertNodeAVL(20)
+	# draw2.updateDrawing('redraw')
+	# newTree.insertNodeAVL(16.5)
+	# newTree.insertNodeAVL(1)
+	# newTree.insertNodeAVL(0.5)
+	# draw2.updateDrawing('redraw')
+	# newTree.insertNodeAVL(1.5)
+	# draw2.updateDrawing('redraw')
 
 # testBinTree()
 # testNormalTree()
