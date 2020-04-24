@@ -49,9 +49,9 @@ class DrawTreeByLink(object):
 		# cy = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
 		cx, cy = 1440, 900
 		self.baseSize = 40 * 1080/cx
-		self.zoomX, self.zoomY = self.tree.width/2 * 1440/cx, self.tree.height/2 * 720/cy
-		if self.tree.height > 5:	self.zoomY *= 0.6
-		if self.tree.width > 6:		self.zoomX *= 0.6
+		self.zoomX, self.zoomY = 1.5 + self.tree.width//10 * 1440/cx, 1.5 + self.tree.height//8 * 720/cy
+		# if self.tree.height > 5:	self.zoomY *= 0.6
+		# if self.tree.width > 6:		self.zoomX *= 0.6
 		self.root.geometry('%dx%d+%d+%d' %(cx*self.zoomX*0.2, cy*self.zoomY*0.3, 800, 300))
 
 		self._drawCanvas()
@@ -62,7 +62,7 @@ class DrawTreeByLink(object):
 		# self.root.mainloop()
 
 	def _drawCanvas(self):
-		self.canvasWidth = self.baseSize * self.tree.width * self.zoomX * 1.5
+		self.canvasWidth = self.baseSize * self.tree.width * self.zoomX 
 		self.canvasHeight = self.baseSize * (self.tree.height + 1)* self.zoomY
 		self.offset = self.baseSize // 2
 		self.cv = tk.Canvas(self.fmCanvas, width = self.canvasWidth, height = self.canvasHeight, borderwidth = 3, relief = 'ridge')
@@ -106,17 +106,16 @@ class DrawTreeByLink(object):
 				curNode.drawWidth = self.canvasWidth
 			else:
 				tmp = max(1, max(curNode.parent.children.keys())) 
-				if curNode.drawWidth is None:
-					curNode.drawWidth = max(self.baseSize, curNode.parent.drawWidth / (1 + tmp))
+				curNode.drawWidth = max(self.baseSize, curNode.parent.drawWidth / (1 + tmp))
 				curNode.drawXY = curNode.parent.drawXY[0] - 1/2 * curNode.parent.drawWidth + \
 								(0.5 + curNode.ndxInSib) * curNode.drawWidth, \
 								(curNode.level-1)*self.baseSize*self.zoomY + self.offset
 				if curNode.drawXY[1] == curNode.prev.drawXY[1] and \
 					curNode.drawXY[0] < curNode.prev.drawXY[0] + self.baseSize:
-					newX = curNode.prev.drawXY[0] + self.baseSize * 1.1 
-					self.canvasWidth += newX - curNode.drawXY[0]
+					newX = curNode.prev.drawXY[0] + 0.5*self.baseSize * 1.1
 					curNode.drawXY = (newX, curNode.drawXY[1])
-								
+					newX = curNode.prev.drawXY[0] - 0.5*self.baseSize * 1.1
+					curNode.prev.drawXY = (newX, curNode.prev.drawXY[1])
 		n = len(drawList) - 1
 		while n >= 0:
 			curNode = drawList[n]

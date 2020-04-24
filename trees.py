@@ -473,13 +473,15 @@ class AVLTree(BinSearchTree):
 				pa.children[1-centerIndex] = centerSubtree
 				centerSubtree.parent = pa
 			else: del pa.children[1-centerIndex]
+
 		elif style == 'B':
 			twoBranches = (centerSubtree.children[0] if 0 in centerSubtree.children else None, 
 							centerSubtree.children[1] if 1 in centerSubtree.children else None)
 			
-			if pa.parent is not None:
-				pa.parent.children[pa.ndxInSib] = centerSubtree
 			centerSubtree.parent = pa.parent
+			if pa != self._root:
+				pa.parent.children[pa.ndxInSib] = centerSubtree
+			else: self._root = centerSubtree
 
 			n = curNode.ndxInSib   # to decide if the tree is left high or right high. 0 will equal to left higher, else 1.
 			pa.parent = curNode.parent = centerSubtree
@@ -830,17 +832,19 @@ class TreeNode(object):
 	
 	@property
 	def level(self):
-		if self._level is None or self.needUpdate == True:
+		if self.parent is None:
+			self._level = 1
+
+		elif self._level is None or self.needUpdate == True:
 			self._level = self.parent.level + 1 
-			self.needUpdate = False
+			# self.needUpdate = False
 		return self._level
 
 	@level.setter
 	def level(self, value):
 		self._level = value
-		self.needUpdate = False
+		# self.needUpdate = False
 	
-
 class TreeNodeInList(object):
 	def __init__(self, inTree, nodeID = -1, content = None, **kw):
 		# super().__init__(nodeID = -1, content = None, **kw)
@@ -979,7 +983,6 @@ def testHeapTree():
 	sortedSeq = []
 	while htree.size != 0:
 		sortedSeq.append(htree.headExtract())
-	# draw.updateDrawing('redraw')
 	print(sortedSeq)
 
 def testBSTree():
@@ -987,22 +990,6 @@ def testBSTree():
 	seq = [7, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
 	seq = [x for x in range(20, 0, -1)]
 	bsTree.buildFromSeq(seq)
-	# draw1 = DrawTreeByLink(bsTree)
-	# # bsTree.insertNode(14)
-	# # draw1.updateDrawing('redraw')
-	# # input('search: 8')
-	# # result = bsTree.search(8)
-	# # print(result)
-	# # input('search: 9')
-	# # result = bsTree.search(9)
-	# # print(result)
-	# # input('search: 30')
-	# # result = bsTree.search(30)
-	# # print(result)
-	# bsTree.deleteValue(9)
-	# draw1.updateDrawing('redraw')
-	# bsTree.deleteValue(19)
-	# draw1.updateDrawing('redraw')
 	seq = bsTree.genSortedSeq()
 	print(seq)
 
@@ -1010,30 +997,14 @@ def testAVLTree():
 	avlTree = AVLTree()
 	# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
 	seq = [x*2 for x in range(10)]
-	# seq = [x for x in range(20)]
 	avlTree.buildFromSeq(seq)
-	# draw1 = DrawTreeByLink(avlTree)
 	newTree = avlTree.reshapeAVL()
 	draw2 = DrawTreeByLink(newTree)
-	for x in range(21, 24):
+	for x in range(21, 29):
+		newTree.insertNodeAVL(x)
+	for x in range(-10, 0):
 		newTree.insertNodeAVL(x)
 	draw2.updateDrawing('redraw')
-
-	newTree.insertNodeAVL(24)
-	draw2.updateDrawing('redraw')
-	# for x in range(26, 27):
-	# 	newTree.insertNodeAVL(x)
-	# newTree.insertNodeAVL(22)
-	# newTree.insertNodeAVL(23)
-	# draw2.updateDrawing('redraw')
-	# newTree.insertNodeAVL(20)
-	# draw2.updateDrawing('redraw')
-	# newTree.insertNodeAVL(16.5)
-	# newTree.insertNodeAVL(1)
-	# newTree.insertNodeAVL(0.5)
-	# draw2.updateDrawing('redraw')
-	# newTree.insertNodeAVL(1.5)
-	# draw2.updateDrawing('redraw')
 
 # testBinTree()
 # testNormalTree()
