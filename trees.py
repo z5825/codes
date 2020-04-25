@@ -119,7 +119,7 @@ class NormalTree(object):
 				curNode = curNode.next
 			
 	def _updateBFTLink(self, **kw):
-		'''kw: updateAll, insertedNode'''
+		'''kw: updateAll, updateFromNode'''
 		if 'updateAll' in kw and kw['updateAll'] == True:
 			qu = deque()
 			curNode = self._root
@@ -137,8 +137,8 @@ class NormalTree(object):
 				qu.popleft() 
 			self._last = curNode
 			self._last.next = None
-		elif 'insertedNode' in kw:
-			newNode = kw['insertedNode']
+		elif 'updateFromNode' in kw:
+			newNode = kw['updateFromNode']
 			prevNode, nextNode = self._findNeighborNode(newNode)
 			if nextNode is not None:  # not the last node
 				prevNode.next = nextNode.prev = newNode
@@ -363,13 +363,15 @@ class BinSearchTree(NormalTree):
 	
 	def deleteValue(self, value):
 		node = self.search(value)
-		child = closest = None
+		child = closest = n = None
 		if node is not None:
 			if node.children == {}:
 				del node.parent.children[node.ndxInSib]
 				closest = node
+				n = closest.ndxInSib
 			else:
 				closest = self._findClosest(node)
+				n = closest.ndxInSib
 				if 0 in closest.children:
 					child = closest.children[0]
 				elif 1 in closest.children:
@@ -377,15 +379,13 @@ class BinSearchTree(NormalTree):
 				node.content = closest.content
 				if child is not None:
 					child.parent = closest.parent
-					n = closest.ndxInSib
 					closest.parent.children[n] = child
 				else:
-					n = closest.ndxInSib
 					del closest.parent.children[n] 
 		self._updateBFTLink(updateAll = True)
 		self._updateIDDict(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
-		return closest   # return the really deleted node for possible use.
+		return closest, n   # return the really deleted node and its position for further use.
 
 	def genSortedSeq(self):
 		seq = []
@@ -435,86 +435,87 @@ class AVLTree(BinSearchTree):
 		curNode, n = self._findParentAndIndex(value)
 		insertNode = TreeNode(self.size + 1, value, parent = curNode)
 		curNode.children[n] = insertNode
-		curNode.needUpdate = True
+		curNode.needUpdateUbf = True
 		if len(curNode.children) == 1:   
 			while curNode != self._root:
 				pa = curNode.parent
-				pa.needUpdate = True
+				pa.needUpdateUbf = True
 				if -1 <= pa.ubf <= 1:
 					curNode = pa
 				else:
-					self._adjust(curNode, pa, 'forInsert')
+					node = self._adjustAVL(pa)
 					break
+		# self._updateBFTLink(updateFromNode = node)
+		# self._updateIDDict(updateAll = True)
+		# self._updateTreeInfo(updateFromNode = node)
 		self._updateBFTLink(updateAll = True)
 		self._updateIDDict(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
 
 	def deleteValue(self, value):
-		delNode = super().deleteValue(value)
+		delNode, n = super().deleteValue(value)
 		if delNode is None: 
 			return
-		while delNode != self._root:
-			pa = delNode.parent
-			if -1 <= pa.ubf <= 1:
-				delNode = pa
-			else:
-				self._adjust(delNode, pa, 'forDelete')
+		if delNode == self._root:
+			self._root = self._last = None
+			return
+		node = delNode.parent
+		while node is not None:
+			if node.ubf < -1 or node.ubf > 1:
+				node = self._adjustAVL(node)
+			node = node.parent
+		self._updateBFTLink(updateAll = True)
+		self._updateIDDict(updateAll = True)
+		self._updateTreeInfo(updateAll = True)
 
-	def _adjust(self, curNode, pa, operation):
-		'''curNode: newly inserted or just deleted; pa: parent of curNode; 
-		   operation: 'forInsert' or 'forDelete'.   '''
-		centerNdx = 1 if pa.ubf > 1 else 0
-		if operation == 'forInsert':
-			centerNode = curNode.children[centerNdx] if centerNdx in curNode.children else None
-		elif operation == 'forDelete':
-			oppositeNode = pa.children[1-curNode.ndxInSib]
-			curNode = oppositeNode
-			centerNode = curNode.children[centerNdx] if centerNdx in curNode.children else None
+	def _adjustAVL(self, node):
+		'''node: the temp root node for adjust.'''
+		self._updateDesendants(node)
+		for x in node.descendants + [node]:
+			x.needUpdateUbf = True
+		if node.ubf > 1:
+			higherNdx, centerNdx = 0, 1
+		elif node.ubf < -1:
+			higherNdx, centerNdx = 1, 0
+		higherSub = node.children[higherNdx]
+		centerSub = higherSub.children[centerNdx] if centerNdx in higherSub.children else None
 
-		if curNode.ubf * pa.ubf > 0:
-			curNode.parent = pa.parent
-			if pa != self._root:
-				pa.parent.children[pa.ndxInSib] = curNode
-			else: self._root = curNode
+		if higherSub.ubf * node.ubf > 0:   # indicate the easier structure: append the centerSub directly to shorter side.
+			higherSub.parent = node.parent
+			if node != self._root:
+				node.parent.children[node.ndxInSib] = higherSub
+			else: self._root = higherSub
+			higherSub.children[centerNdx] = node
+			node.parent = higherSub
+			if centerSub is not None:
+				node.children[1-centerNdx] = centerSub
+				centerSub.parent = node
+			else: del node.children[1-centerNdx]
+			return higherSub
 
-			curNode.children[centerNdx] = pa
-			pa.parent = curNode
-			if centerNode is not None:
-				pa.children[1-centerNdx] = centerNode
-				centerNode.parent = pa
-			else: del pa.children[1-centerNdx]
+		else: # the harder structure: append the children of centerSub to both side subtrees.
+			twoBranches = (centerSub.children[0] if 0 in centerSub.children else None, 
+							centerSub.children[1] if 1 in centerSub.children else None)
+			centerSub.parent = node.parent
+			if node != self._root:
+				node.parent.children[node.ndxInSib] = centerSub
+			else: self._root = centerSub
 
-		else:
-			twoBranches = (centerNode.children[0] if 0 in centerNode.children else None, 
-							centerNode.children[1] if 1 in centerNode.children else None)
-			
-			centerNode.parent = pa.parent
-			if pa != self._root:
-				pa.parent.children[pa.ndxInSib] = centerNode
-			else: self._root = centerNode
-
-			n = curNode.ndxInSib   # to decide if the tree is left high or right high. 0 will equal to left higher, else 1.
-			pa.parent = curNode.parent = centerNode
-			centerNode.children[n], centerNode.children[1-n] = curNode, pa
+			n = higherNdx
+			node.parent = higherSub.parent = centerSub
+			centerSub.children[n], centerSub.children[1-n] = higherSub, node
 			if twoBranches[n] is not None:
-				curNode.children[1-n] = twoBranches[n]
-				twoBranches[n].parent = curNode
+				higherSub.children[1-n] = twoBranches[n]
+				twoBranches[n].parent = higherSub
 			else:
-				del curNode.children[1-n]
-			if operation == 'forInsert':
-				if twoBranches[1-n] is not None:
-					pa.children[n] = twoBranches[1-n]
-					twoBranches[1-n].parent = pa
-				else:
-					del pa.children[n]
-			elif operation == 'forDelete':
-				if twoBranches[1-n] is not None:
-					pa.children[n] = twoBranches[1-n]
-					twoBranches[1-n].parent = pa
-				else:
-					del pa.children[n]
-
-
+				del higherSub.children[1-n]
+			if twoBranches[1-n] is not None:
+				node.children[n] = twoBranches[1-n]
+				twoBranches[1-n].parent = node
+			else:
+				del node.children[n]
+			return centerSub
+					
 class CompleteBinTreeByLink(NormalTree):
 	MAXNODE = 2
 	def __init__(self):
@@ -822,10 +823,10 @@ class TreeNode(object):
 			self.parent = None
 			self._level = 1
 		self.descendants = []
-		self.needUpdate = True
+		self.needUpdateUbf = True
+		self.needUpdateLvl = True
 		self._height = None
 		self._ubf = None  # unbalanced factor: = height of left subtree - height of right subtree
-
 
 	def __str__(self):
 		if type(self.content) == int:
@@ -855,39 +856,36 @@ class TreeNode(object):
 	def level(self):
 		if self.parent is None:
 			self._level = 1
-
-		elif self._level is None or self.needUpdate == True:
+		elif self._level is None or self.needUpdateLvl == True:
 			self._level = self.parent.level + 1 
-			# self.needUpdate = False
+			self.needUpdateLvl = False
 		return self._level
 
 	@level.setter
 	def level(self, value):
 		self._level = value
-		# self.needUpdate = False
+		self.needUpdateLvl = False
 
 	@property
 	def height(self):
-		if self._height is None or self.needUpdate == True:
-			if self.children == {}:
-				self._height = 1
-			else:
-				h = []
-				for ch in self.children.values():
-					h.append(ch.height)
-				self._height = max(h) + 1
-			# self.needUpdate = False
+		if self.children == {}:
+			self._height = 1
+		else:
+			h = []
+			for ch in self.children.values():
+				h.append(ch.height)
+			self._height = max(h) + 1
 		return self._height
 
 	@property
 	def ubf(self):
-		if self._ubf is None or self.needUpdate == True:
+		if self._ubf is None or self.needUpdateUbf == True:
 			lh = self.children[0].height if 0 in self.children else 0
 			rh = self.children[1].height if 1 in self.children else 0
 			self._ubf = lh - rh
+			self.needUpdateUbf = False
 		return self._ubf
-		
-	
+			
 class TreeNodeInList(object):
 	def __init__(self, inTree, nodeID = -1, content = None, **kw):
 		# super().__init__(nodeID = -1, content = None, **kw)
@@ -1022,8 +1020,9 @@ def testAVLTree():
 	for x in range(-10, 0):
 		newTree.insertNodeAVL(x)
 	draw2.updateDrawing('redraw')
-	newTree.deleteValue(8)
-	draw2.updateDrawing('redraw')
+	for x in range(-3, 3):
+		newTree.deleteValue(x)
+		draw2.updateDrawing('redraw')
 
 # testBinTree()
 # testNormalTree()
