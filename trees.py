@@ -460,6 +460,7 @@ class AVLTree(BinSearchTree):
 			self._root = self._last = None
 			return
 		node = delNode.parent
+		node.needUpdateUbf = True
 		while node is not None:
 			if node.ubf < -1 or node.ubf > 1:
 				node = self._adjustAVL(node)
@@ -1020,6 +1021,8 @@ def testAVLTree():
 	for x in range(-10, 0):
 		newTree.insertNodeAVL(x)
 	draw2.updateDrawing('redraw')
+	# newTree.deleteValue(-3)
+	# draw2.updateDrawing('redraw')
 	for x in range(-3, 3):
 		newTree.deleteValue(x)
 		draw2.updateDrawing('redraw')
