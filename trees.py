@@ -8,7 +8,7 @@ from tktree import DrawTreeByLink, DrawTreeByList
 class NormalTree(object):
 	MAXNODE = 10
 	def __init__(self):
-		self._root = TreeNode()
+		self._root = None
 		self._last = None
 		self._size = 0
 		self.levelWidth, self.ndxOfLeftmost, self.ndxOfRightmost = {}, {}, {}
@@ -126,7 +126,10 @@ class NormalTree(object):
 			curNode.ndx = curNode.level = 1
 			qu.append(self._root)
 			while len(qu) != 0:
-				children = dict(sorted(qu[0].children.items(),key = lambda x: x[0])).values()
+				if isinstance(qu[0].children, dict):
+					children = dict(sorted(qu[0].children.items(),key = lambda x: x[0])).values()
+				elif isinstance(qu[0].children, list):
+					children = qu[0].children
 				for ch in children:
 					qu.append(ch)
 					curNode.next = qu[-1]
@@ -838,10 +841,13 @@ class TreeNode(object):
 	@property
 	def ndxInSib(self):
 		_siblings = self.parent.children
-		for k in _siblings.keys():
-			if _siblings[k] == self:
-				self._ndxInSib = k
-				break
+		if isinstance(_siblings, dict):
+			for k in _siblings.keys():
+				if _siblings[k] == self:
+					self._ndxInSib = k
+					break
+		elif isinstance(_siblings, list):
+			self._ndxInSib = _siblings.index(self)
 		return self._ndxInSib
 
 	@ndxInSib.setter
@@ -933,105 +939,215 @@ class TreeNodeInList(object):
 			return self.inTree(self.ndx - 1)
 		else: return None
 
-def testBinTree():
-	tree1 = CompleteBinTreeByLink()
-	# seq = list(chr(x+65) for x in range(0, 26))
-	seq = list(x for x in range(1, 16))
-	tree1.buildFromSeq(seq)
-	draw1 = DrawTreeByLink(tree1)
-	tree1.append(*(16,17))
-	draw1.updateDrawing('append')
-	tree1.deleteAndMove()
-	draw1.updateDrawing('delete')
-	tree1.deleteAndMove(ID = 3)
-	draw1.updateDrawing('delete', ID = 3)
-	tree1.deleteAndMove(fromID = 6, toID = 14)
-	draw1.updateDrawing('delete', fromID = 6, toID = 14)
+class TreeNodeBM(TreeNode):
+	BM = 3
+	def __init__(self, nodeID = -1, content = None, **kw):
+		super().__init__(nodeID, content, **kw)
+		if not isinstance(self.content, list):
+			self.content =[self.content]
+		self.children = []
 
-def testNormalTree():
-	tree1 = CompleteBinTreeByLink()
-	seq1 = list(x for x in range(1, 16))
-	tree1.buildFromSeq(seq1)
-	draw1 = DrawTreeByLink(tree1)
+	@property
+	def size(self):
+		return len(self.content)
+		
+	def insertValue(self, value, **kw):
+		''' kw: insertAt: the index in content list where value shall be inserted.'''
+		if 'insertAt' in kw:
+			ndx = kw['insertAt']
+		else:
+			ndx = 0 
+			ct = self.content[ndx]
+			while ct is not None and value > ct:
+				ndx += 1
+		self.content.insert(ndx, value)
+		return ndx
 
-	tree2 = CompleteBinTreeByLink()
-	seq2 = list(chr(x+65) for x in range(0, 10))
-	tree2.buildFromSeq(seq2)
-	draw2 = DrawTreeByLink(tree2)	
+class BMTree(NormalTree):
+	BM = 3
+	def __init__(self):
+		super().__init__()
 
-	# tree1.insert(13, 30, 'x')
-	# draw1.updateDrawing('insert')
-	# tree2.insert(6, 31, 'y', ndxInSib = 0)
-	# draw2.updateDrawing('insert', insertID = 31)
+	def _findPosition(self, value, forSearch = False):
+		node = self._root
+		if node is None:
+			self._root = node = TreeNodeBM(-1,[])
+			return node, 0
+		while True:
+			n = 0
+			while n < len(node.content) and value > node.content[n]:
+				n += 1
+			if n < len(node.content) and value == node.content[n]:
+				position = node, n
+				if forSearch == True:
+					return position, 'found'
+				else:
+					return position
+			else:
+				if len(node.children) != 0:
+					node = node.children[n] 
+				else:
+					position = node, n
+					if forSearch == True:
+							return position, 'not found'
+					else:
+						return position
 
-	tree1.moveToTree(6, tree2, 8)
-	draw1.updateDrawing('redraw')
-	draw2.updateDrawing('redraw')
+	def _split(self, node):
+		mid = len(node.content) // 2
+		new = TreeNodeBM(-1, node.content[mid])
+		left, right = TreeNodeBM(-1, node.content[0 : mid]), TreeNodeBM(-1, node.content[mid + 1 : len(node.content)])
+		if node == self._root:
+			new.children = [left, right]
+			self._root = left.parent = right.parent = new
+		else:
+			pa, ndx = node.parent, node.ndxInSib
+			pa.insertValue(node.content[mid], insertAt = ndx)
+			pa.children.pop(ndx)
+			pa.children.insert(ndx, right)
+			pa.children.insert(ndx, left)
+			left.parent = right.parent = pa
 
-	# tree1.insert(11, 32, 'z', ndxInSib = 0)
-	# draw1.updateDrawing('insert', insertID = 32)
-	# tree1.deleteDown(deleteID = 5)
-	# draw1.updateDrawing('deleteDown', lastDeletedIDs = tree1.lastDeletedIDs)
+		ch = node.children
+		if ch != []:
+			for i in range(mid + 1):
+				left.children.append(ch[i])
+				ch[i].parent = left
+			for i in range(mid + 1, len(ch)):
+				right.children.append(ch[i])
+				ch[i].parent = right
+		
+		if node.parent is not None and len(node.parent.content) == self.BM:
+			self._split(node.parent)
 
-def testExpTree():
-	tree = ExpressionTree()
-	expr = '((1-2-4/5*(1/3))+(2+4+3*5)*5)/7'
-	# ((1+2-4/5*(1/3))+(2+4+3*5)*5)/7
-	# 1,2,+,4,5,/,1,3,/,*,-,2,4,+,3,5,*,+,5,*,+,7,/
-	# expr = '1+2*3'
-	tree.buildFromExpr(expr)
-	draw = DrawTreeByLink(tree)
-	draw.updateDrawing('redraw')
-	value = tree.evaluate(tree._root)
-	print(value)
+	def search(self, value):
+		position, result = self._findPosition(value, True)
+		if result == 'found':
+			return position
+		else: return 'not found'
 
-def testHeapTree():
-	htree = HeapTree()
-	# htree.buildFromRandom(10)
-	seq = [3, 17, 7, 12, 19, 5, 15, 2, 18, 6]
-	htree.buildFromSeq(seq)
-	htree.minSort(htree._root)
-	draw = DrawTreeByList(htree)
-	htree.heapAppend(4)
-	draw.updateDrawing('redraw')
-	sortedSeq = []
-	while htree.size != 0:
-		sortedSeq.append(htree.headExtract())
-	print(sortedSeq)
+	def insertValue(self, value):
+		node, n = self._findPosition(value)
+		node.insertValue(value, insertAt = n)
+		if len(node.content) == self.BM:
+			self._split(node)
+		self._updateBFTLink(updateAll = True)
+		self._updateIDDict(updateAll = True)
+		self._updateTreeInfo(updateAll = True)
 
-def testBSTree():
-	bsTree = BinSearchTree()
-	seq = [7, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
-	seq = [x for x in range(20, 0, -1)]
-	bsTree.buildFromSeq(seq)
-	bsTree.deleteValue(17)
-	bsTree.deleteValue(19)
-	seq = bsTree.genSortedSeq()
-	print(seq)
+def test():
+	def testBinTree():
+		tree1 = CompleteBinTreeByLink()
+		# seq = list(chr(x+65) for x in range(0, 26))
+		seq = list(x for x in range(1, 16))
+		tree1.buildFromSeq(seq)
+		draw1 = DrawTreeByLink(tree1)
+		tree1.append(*(16,17))
+		draw1.updateDrawing('append')
+		tree1.deleteAndMove()
+		draw1.updateDrawing('delete')
+		tree1.deleteAndMove(ID = 3)
+		draw1.updateDrawing('delete', ID = 3)
+		tree1.deleteAndMove(fromID = 6, toID = 14)
+		draw1.updateDrawing('delete', fromID = 6, toID = 14)
 
-def testAVLTree():
-	avlTree = AVLTree()
-	# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
-	seq = [x*2 for x in range(10)]
-	avlTree.buildFromSeq(seq)
-	newTree = avlTree.reshapeAVL()
-	draw2 = DrawTreeByLink(newTree)
-	for x in range(21, 29):
-		newTree.insertNodeAVL(x)
-	for x in range(-10, 0):
-		newTree.insertNodeAVL(x)
-	draw2.updateDrawing('redraw')
-	# newTree.deleteValue(-3)
-	# draw2.updateDrawing('redraw')
-	for x in range(-3, 3):
-		newTree.deleteValue(x)
+	def testNormalTree():
+		tree1 = CompleteBinTreeByLink()
+		seq1 = list(x for x in range(1, 16))
+		tree1.buildFromSeq(seq1)
+		draw1 = DrawTreeByLink(tree1)
+
+		tree2 = CompleteBinTreeByLink()
+		seq2 = list(chr(x+65) for x in range(0, 10))
+		tree2.buildFromSeq(seq2)
+		draw2 = DrawTreeByLink(tree2)	
+
+		# tree1.insert(13, 30, 'x')
+		# draw1.updateDrawing('insert')
+		# tree2.insert(6, 31, 'y', ndxInSib = 0)
+		# draw2.updateDrawing('insert', insertID = 31)
+
+		tree1.moveToTree(6, tree2, 8)
+		draw1.updateDrawing('redraw')
 		draw2.updateDrawing('redraw')
 
-# testBinTree()
-# testNormalTree()
-# testExpTree()
-# testHeapTree()
-# testBSTree()
-testAVLTree()
+		# tree1.insert(11, 32, 'z', ndxInSib = 0)
+		# draw1.updateDrawing('insert', insertID = 32)
+		# tree1.deleteDown(deleteID = 5)
+		# draw1.updateDrawing('deleteDown', lastDeletedIDs = tree1.lastDeletedIDs)
 
+	def testExpTree():
+		tree = ExpressionTree()
+		expr = '((1-2-4/5*(1/3))+(2+4+3*5)*5)/7'
+		# ((1+2-4/5*(1/3))+(2+4+3*5)*5)/7
+		# 1,2,+,4,5,/,1,3,/,*,-,2,4,+,3,5,*,+,5,*,+,7,/
+		# expr = '1+2*3'
+		tree.buildFromExpr(expr)
+		draw = DrawTreeByLink(tree)
+		draw.updateDrawing('redraw')
+		value = tree.evaluate(tree._root)
+		print(value)
 
+	def testHeapTree():
+		htree = HeapTree()
+		# htree.buildFromRandom(10)
+		seq = [3, 17, 7, 12, 19, 5, 15, 2, 18, 6]
+		htree.buildFromSeq(seq)
+		htree.minSort(htree._root)
+		draw = DrawTreeByList(htree)
+		htree.heapAppend(4)
+		draw.updateDrawing('redraw')
+		sortedSeq = []
+		while htree.size != 0:
+			sortedSeq.append(htree.headExtract())
+		print(sortedSeq)
+
+	def testBSTree():
+		bsTree = BinSearchTree()
+		seq = [7, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
+		seq = [x for x in range(20, 0, -1)]
+		bsTree.buildFromSeq(seq)
+		bsTree.deleteValue(17)
+		bsTree.deleteValue(19)
+		seq = bsTree.genSortedSeq()
+		print(seq)
+
+	def testAVLTree():
+		avlTree = AVLTree()
+		# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
+		seq = [x*2 for x in range(10)]
+		avlTree.buildFromSeq(seq)
+		newTree = avlTree.reshapeAVL()
+		draw2 = DrawTreeByLink(newTree)
+		for x in range(21, 29):
+			newTree.insertNodeAVL(x)
+		for x in range(-10, 0):
+			newTree.insertNodeAVL(x)
+		draw2.updateDrawing('redraw')
+		# newTree.deleteValue(-3)
+		# draw2.updateDrawing('redraw')
+		for x in range(-3, 3):
+			newTree.deleteValue(x)
+			draw2.updateDrawing('redraw')
+
+	def testBMTree():
+		btree = BMTree()
+		for x in range(13):
+			btree.insertValue(x*2)
+		draw = DrawTreeByLink(btree)
+		btree.insertValue(3)
+		draw.updateDrawing('redraw')
+		btree.insertValue(5)
+		draw.updateDrawing('redraw')
+
+		# print(btree)
+
+	# testBinTree()
+	# testNormalTree()
+	# testExpTree()
+	# testHeapTree()
+	# testBSTree()
+	testAVLTree()
+	# testBMTree()
+
+test()

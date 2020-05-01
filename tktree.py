@@ -1,7 +1,6 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.messagebox as mbox
-import time
 
 # import win32api,win32con
 
@@ -50,22 +49,18 @@ class DrawTreeByLink(object):
 		cx, cy = 1440, 900
 		self.baseSize = 40 * 1080/cx
 		self.zoomX, self.zoomY = 1.5 + self.tree.width//10 * 1440/cx, 1.5 + self.tree.height//8 * 720/cy
-		# if self.tree.height > 5:	self.zoomY *= 0.6
-		# if self.tree.width > 6:		self.zoomX *= 0.6
 		self.root.geometry('%dx%d+%d+%d' %(cx*self.zoomX*0.2, cy*self.zoomY*0.3, 800, 300))
 
 		self._drawCanvas()
 		self._drawNodesAndLines(fromNode = self.tree._root, toNode = self.tree._last)
 		self.bt1.waitvar(self.step)
-		# self.root.update()
-		# mbox.showinfo('', 'inited.')
-		# self.root.mainloop()
 
 	def _drawCanvas(self):
 		self.canvasWidth = self.baseSize * self.tree.width * self.zoomX 
 		self.canvasHeight = self.baseSize * (self.tree.height + 1)* self.zoomY
 		self.offset = self.baseSize // 2
-		self.cv = tk.Canvas(self.fmCanvas, width = self.canvasWidth, height = self.canvasHeight, borderwidth = 3, relief = 'ridge')
+		self.cv = tk.Canvas(self.fmCanvas, width = self.canvasWidth, height = self.canvasHeight, \
+							borderwidth = 3, relief = 'ridge')
 		self.cv.pack(side = 'left', fill = 'both', expand = True)
 
 		self.verBar = tk.Scrollbar(self.fmVerBar, width = 20)
@@ -105,23 +100,41 @@ class DrawTreeByLink(object):
 				curNode.drawXY = 0.5 * self.canvasWidth, self.offset
 				curNode.drawWidth = self.canvasWidth
 			else:
-				tmp = max(1, max(curNode.parent.children.keys())) 
-				curNode.drawWidth = max(self.baseSize, curNode.parent.drawWidth / (1 + tmp))
+				if isinstance(curNode.parent.children, dict):
+					tmp = max(1, max(curNode.parent.children.keys())) 
+					contentLength = 1
+				elif isinstance(curNode.parent.children, list):
+					tmp = max(1, len(curNode.parent.children)) 
+					contentLength = max(1, len(curNode.content)) 
+				curNode.drawWidth = max(self.baseSize * contentLength, curNode.parent.drawWidth / (1 + tmp))
 				curNode.drawXY = curNode.parent.drawXY[0] - 1/2 * curNode.parent.drawWidth + \
 								(0.5 + curNode.ndxInSib) * curNode.drawWidth, \
 								(curNode.level-1)*self.baseSize*self.zoomY + self.offset
+
+				# to adjust the position of overlayed nodes:
 				if curNode.drawXY[1] == curNode.prev.drawXY[1] and \
-					curNode.drawXY[0] < curNode.prev.drawXY[0] + self.baseSize:
-					newX = curNode.prev.drawXY[0] + 0.5*self.baseSize * 1.1
+					curNode.drawXY[0] < curNode.prev.drawXY[0] + self.baseSize * contentLength:
+					newX = curNode.prev.drawXY[0] + 0.5*self.baseSize*contentLength * 1.1
 					curNode.drawXY = (newX, curNode.drawXY[1])
-					newX = curNode.prev.drawXY[0] - 0.5*self.baseSize * 1.1
-					curNode.prev.drawXY = (newX, curNode.prev.drawXY[1])
+
+					prevNode = curNode.prev
+					while prevNode.drawXY[1] == prevNode.prev.drawXY[1] and \
+						prevNode.drawXY[0] < prevNode.prev.drawXY[0] + self.baseSize * contentLength:
+						newX = prevNode.drawXY[0] - 0.5*self.baseSize*contentLength * 1.1
+						prevNode.drawXY = (newX, prevNode.drawXY[1])
+						prevNode = prevNode.prev
+					# self.canvasWidth += self.baseSize*contentLength * 1.1
+
 		n = len(drawList) - 1
 		while n >= 0:
 			curNode = drawList[n]
 			if len(curNode.children) > 1:
 				x = 0
-				for ch in curNode.children.values():
+				if isinstance(curNode.children, dict):
+					tmpList = curNode.children.values()
+				elif isinstance(curNode.children, list):
+					tmpList = curNode.children
+				for ch in tmpList:
 					x += ch.drawXY[0]
 				curNode.drawXY = x/len(curNode.children), curNode.drawXY[1]
 			elif 0 in curNode.children:
@@ -131,26 +144,41 @@ class DrawTreeByLink(object):
 			n -= 1
 
 		for curNode in drawList:
+			contentLength = 1
+			if isinstance(curNode.content, list):
+				contentLength = max(1, len(curNode.content)) 
 			x1, y1 = curNode.drawXY
-			x2, y2 = x1 + self.baseSize, y1 + self.baseSize
+			x2, y2 = x1 + self.baseSize * contentLength, y1 + self.baseSize
 			tmpTag = ('nodes', 'node'+str(curNode.nodeID))
 			self.cv.create_oval(x1, y1, x2, y2, fill = 'white', tag = tmpTag)
-			self.cv.create_text(x1 + self.offset, y1 + self.offset, text = curNode.content, tag = tmpTag)
+			txt = curNode.content
+			if isinstance(curNode.content, list):
+				txt = str()
+				for x in curNode.content:
+					txt += str(x) + ', ' 
+				txt = txt.rstrip(', ')
+			self.cv.create_text((x1 + x2)/2, y1 + self.offset, text = txt, tag = tmpTag)
 
 		#draw lines:
 		for curNode in drawList:
-			for ch in curNode.children.values():
-				x1, y1, x2, y2 = curNode.drawXY[0] + self.offset, curNode.drawXY[1] + self.offset,  \
-					ch.drawXY[0] + self.offset, ch.drawXY[1] + self.offset
+			if isinstance(curNode.children, dict):
+				tmpList = curNode.children.values()
+				contentLength = 1
+			elif isinstance(curNode.children, list):
+				tmpList = curNode.children
+				contentLength = len(curNode.content)
+			for ch in tmpList:
+				x1, y1, x2, y2 = curNode.drawXY[0] + self.baseSize*contentLength/2, curNode.drawXY[1] + self.offset,  \
+					ch.drawXY[0] + self.baseSize/2, ch.drawXY[1] + self.offset
 				tmpTag = ('lines', str(curNode.nodeID) + '->', '->'+ str(ch.nodeID))
 				self.cv.create_line(x1, y1, x2, y2, width = 3, fill = 'red', tag = tmpTag)
-			if curNode.parent is not None:   # to draw for newly added nodes.
-				tmpTag = ('lines', str(curNode.parent.nodeID) + '->', '->' + str(curNode.nodeID))
-				if self.cv.find('withtag', tmpTag) == ():
-					parentXY = curNode.parent.drawXY[0] + self.offset, curNode.parent.drawXY[1] + self.offset
-					x1, y1, x2, y2 =  parentXY[0], parentXY[1], 	\
-						curNode.drawXY[0] + self.offset, curNode.drawXY[1] + self.offset
-					self.cv.create_line(x1, y1, x2, y2, width = 3, fill = 'red', tag = tmpTag)					
+			# if curNode.parent is not None:   # to draw for newly added nodes.
+			# 	tmpTag = ('lines', str(curNode.parent.nodeID) + '->', '->' + str(curNode.nodeID))
+			# 	if self.cv.find('withtag', tmpTag) == ():
+			# 		parentXY = curNode.parent.drawXY[0] + self.offset, curNode.parent.drawXY[1] + self.offset
+			# 		x1, y1, x2, y2 =  parentXY[0], parentXY[1], 	\
+			# 			curNode.drawXY[0] + self.offset, curNode.drawXY[1] + self.offset
+			# 		self.cv.create_line(x1, y1, x2, y2, width = 3, fill = 'red', tag = tmpTag)					
 
 		#draw cousin lines:
 		for curNode in drawList:
@@ -272,7 +300,10 @@ class DrawTreeByList(DrawTreeByLink):
 				curNode.drawWidth = self.canvasWidth
 			else:
 				w1 = curNode.parent.drawWidth
-				w2 = curNode.drawWidth = w1 / (1 + max(curNode.parent.children.keys()))
+				if isinstance(curNode.parent.children, dict):
+					w2 = curNode.drawWidth = w1 / (1 + max(curNode.parent.children.keys()))
+				elif isinstance(curNode.parent.children, list):
+					w2 = curNode.drawWidth = w1 / (1 + len(curNode.parent.children)) 
 				curNode.drawXY = curNode.parent.drawXY[0] - 1/2 * w1 + (1/2 + curNode.ndxInSib) * w2, \
 								(curNode.level-1)*self.baseSize*self.zoomY + self.offset
 			x1, y1 = curNode.drawXY
@@ -283,7 +314,11 @@ class DrawTreeByList(DrawTreeByLink):
 
 		#draw lines:
 		for curNode in self.tree:
-			for ch in curNode.children.values():
+			if isinstance(curNode.children, dict):
+				tmpList = curNode.children.values()
+			elif isinstance(curNode.children, list):
+				tmpList = curNode.children
+			for ch in tmpList:
 				x1, y1, x2, y2 = curNode.drawXY[0] + self.offset, curNode.drawXY[1] + self.offset,  \
 					ch.drawXY[0] + self.offset, ch.drawXY[1] + self.offset
 				tmpTag = ('lines', str(curNode.nodeID) + '->', '->'+ str(ch.nodeID))
