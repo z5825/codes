@@ -1147,7 +1147,7 @@ def test():
 	# testExpTree()
 	# testHeapTree()
 	# testBSTree()
-	testAVLTree()
-	# testBMTree()
+	# testAVLTree()
+	testBMTree()
 
 test()
