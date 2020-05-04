@@ -946,6 +946,8 @@ class TreeNodeBM(TreeNode):
 		if not isinstance(self.content, list):
 			self.content =[self.content]
 		self.children = []
+		if 'BM' in kw:
+			self.BM = kw['BM']
 
 	@property
 	def size(self):
@@ -965,8 +967,10 @@ class TreeNodeBM(TreeNode):
 
 class BMTree(NormalTree):
 	BM = 3
-	def __init__(self):
+	def __init__(self, **kw):
 		super().__init__()
+		if 'BM' in kw:
+			self.BM = kw['BM']
 
 	def _findPosition(self, value, forSearch = False):
 		node = self._root
