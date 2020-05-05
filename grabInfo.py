@@ -5,7 +5,7 @@ def getLinks():
     ses = HTMLSession()
     strFix = 'http://fwpt.csggzy.cn/jyxxfjjggg/index'
     strVar = ['.jhtml']
-    for i in range(2, 2):
+    for i in range(2, 16):
         strVar.append('_' + str(i) + '.jhtml')
     lks = []
     content = []
@@ -44,41 +44,66 @@ def getContent():
         url = lk.pop()
         r = ses.get(url)
         
-        result = r.html.find('p', containing = '项目名称')
+        toFind = '项目名称'
+        result = r.html.find('p', containing = toFind)
         if len(result) != 0:
             newPro.name = result[0].text.replace('\n','')
+            ndx = newPro.name.find(toFind) + len(toFind)
+            newPro.name = newPro.name[ndx:]
 
-        result = r.html.find('p', containing = '中标价格')
+        toFind = '中标价格'
+        result = r.html.find('p', containing = toFind)
         if len(result) != 0:
             newPro.price = result[0].text.replace('\n','')
+            ndx = newPro.price.find(toFind) + len(toFind)
+            newPro.price = newPro.price[ndx:]
         else:
-            result = r.html.find('p', containing = '中标金额')
+            toFind = '中标金额'
+            result = r.html.find('p', containing = toFind)
             if len(result) != 0:
                 newPro.price = result[0].text.replace('\n','')
+                ndx = newPro.price.find(toFind) + len(toFind)
+                newPro.price = newPro.price[ndx:]
 
-        result = r.html.find('p', containing = '中标单位名称')
+        toFind = '中标单位名称'
+        result = r.html.find('p', containing = toFind)
         if len(result) != 0:
             newPro.company = result[0].text.replace('\n','')
+            ndx = newPro.company.find(toFind) + len(toFind)
+            newPro.company = newPro.company[ndx:]
 
-        result = r.html.find('p', containing = '招标人')
+        toFind = '招标人'
+        result = r.html.find('p', containing = toFind)
         if len(result) != 0:
             newPro.owner = result[0].text.replace('\n','')
+            ndx = newPro.owner.find(toFind) + len(toFind)
+            newPro.owner = newPro.owner[ndx:]
         else:
-            result = r.html.find('p', containing = '招 标 人')
+            toFind = '招 标 人'
+            result = r.html.find('p', containing = toFind)
             if len(result) != 0:
                 newPro.owner = result[0].text.replace('\n','')
+                ndx = newPro.owner.find(toFind) + len(toFind)
+                newPro.owner = newPro.owner[ndx:]
 
-        result = r.html.find('p', containing = '监督部门')
+        toFind = '监督部门'
+        result = r.html.find('p', containing = toFind)
         if len(result) != 0:
             newPro.supervisor = result[0].text.replace('\n','')
-        else:
-            result = r.html.find('p', containing = '招标投标管理')
-            if len(result) != 0:
-                newPro.supervisor = result[0].text.replace('\n','')
+            ndx = newPro.supervisor.find(toFind) + len(toFind)
+            newPro.supervisor = newPro.supervisor[ndx:]
+        # else:
+        #     toFind = '招标投标管理'
+        #     result = r.html.find('p', containing = '招标投标管理')
+        #     if len(result) != 0:
+        #         newPro.supervisor = result[0].text.replace('\n','')
 
-        result = r.html.find('p', containing = '招标代理')
+        toFind = '招标代理'
+        result = r.html.find('p', containing = toFind)
         if len(result) != 0:
             newPro.biddingServer = result[0].text.replace('\n','')
+            ndx = newPro.biddingServer.find(toFind) + len(toFind)
+            newPro.biddingServer = newPro.biddingServer[ndx:]
 
         entry = {'项目名称':newPro.name,'中标金额':newPro.price,'中标单位名称':newPro.company, \
                     '招标人':newPro.owner,'监督部门':newPro.supervisor,'招标代理':newPro.biddingServer}
@@ -93,17 +118,23 @@ def getContent():
     return dictionary, projects
 
 def export(records):
-    rcd = records[0]
-    # df = pd.DataFrame.from_dict(rcd)
-    df = pd.DataFrame(data = rcd)
-    # df = pd.DataFrame(data = rcd, columns = \
-    #                 ['项目名称','中标金额','中标单位名称','招标人','监督部门','招标代理'], index = [1])
-    # for rcd in records:
-    #     df.append(pd.DataFrame(rcd), ignore_index = True)
-
-    print(df)
+    name, price, company, owner, supervisor, biddingServer = ([] for x in range(6))
+    for rcd in records:
+        name.append(rcd.name)
+        price.append(rcd.price)
+        company.append(rcd.company)
+        owner.append(rcd.owner)
+        supervisor.append(rcd.supervisor)
+        biddingServer.append(rcd.biddingServer)
+        # df.append(pd.DataFrame(rcd), ignore_index = True)
+    data = {'项目名称':name, '中标金额':price, '中标单位名称':company, 
+            '招标人':owner,'监督部门':supervisor,'招标代理':biddingServer}
+    df = pd.DataFrame(data)
+    df.to_excel('projects.xlsx', sheet_name='1', index=False)
+    # print(df)
 
 dictionary, projects = getContent()
-export(dictionary)
+export(projects)
 
 # https://requests-html.kennethreitz.org//index.html
+# https://changsha.hnsggzy.com/queryContent_356-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime=#
