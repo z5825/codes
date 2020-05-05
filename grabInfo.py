@@ -58,14 +58,13 @@ def getLinks():
             url = url.pop()+'\n'
             f.writelines(url)
 
-def getContent():
+def getContent_A():
     with open('sites.txt', 'r') as f:
         links = f.readlines()
         for i in range(len(links)):
             links[i] = links[i].rstrip('\n')
     projects = []
     ses = HTMLSession()
-    # links = [{'http://fwpt.csggzy.cn/jyxxfjjggg/25780.jhtml'}]
 
     sn = 1
     for url in links:
@@ -168,6 +167,93 @@ def getContent():
 
     return projects
 
+def getContent_B():
+    with open('sites_B.txt', 'r') as f:
+        links = f.readlines()
+        for i in range(len(links)):
+            links[i] = links[i].rstrip('\n')
+    
+    projects = []
+    ses = HTMLSession()
+
+    sn = 1
+    for url in links:
+        newPro = Project(sn)
+        sn += 1
+        r = ses.get(url)
+        
+        toFind = '项目名称'
+        result = r.html.find('#publicity_content > table > tbody > tr:nth-child(1) > td.xmmc')
+        if len(result) != 0:
+            newPro.name = result[0].text.replace('\n','')
+
+        toFind = '中标价格'
+        result = r.html.find('#content-box-id > table:nth-child(10) > tbody > tr:nth-child(3) > td:nth-child(2) > p > span')
+        if len(result) != 0:
+            newPro.price = result[0].text.replace('\n','')
+        
+        toFind = '中标单位名称'
+        result = r.html.find('#content-box-id > table:nth-child(10) > tbody > tr:nth-child(2) > td:nth-child(2) > p > span')
+        if len(result) != 0:
+            newPro.company = result[0].text.replace('\n','')
+
+        toFind = '招标人'
+        result = r.html.find('#publicity_content > table > tbody > tr:nth-child(2) > td:nth-child(4)')
+        if len(result) != 0:
+            newPro.owner = result[0].text.replace('\n','')
+
+        toFind = '监督部门'
+        result = r.html.find('#publicity_content > table > tbody > tr:nth-child(3) > td:nth-child(4)')
+        if len(result) != 0:
+            newPro.supervisor = result[0].text.replace('\n','')
+
+        # toFind = '招标代理'
+        # result = r.html.find('p', containing = toFind)
+        # if len(result) != 0:
+        #     newPro.biddingServer = result[0].text.replace('\n','')
+        #     ndx = newPro.biddingServer.find(toFind) + len(toFind)
+        #     newPro.biddingServer = newPro.biddingServer[ndx:]
+
+        ctt = [newPro.name, newPro.price, newPro.company, \
+                newPro.owner, newPro.supervisor, newPro.biddingServer]
+        for i in range(len(ctt)):
+            ndx = ctt[i].find('：')
+            if ndx != -1:
+                ctt[i] = ctt[i][ndx + 1:]
+            else:
+                ndx = ctt[i].find(':')
+                if ndx != -1:
+                    ctt[i] = ctt[i][ndx + 1:]
+                
+        for i in (1,):
+            if ctt[i].endswith('万元'):
+                ctt[i] = ctt[i].rsplit('万元')[0]
+            elif ctt[i].endswith('（元）'):
+                ctt[i] = ctt[i].rsplit('（元）')[0]
+            elif ctt[i].endswith('(元)'):
+                ctt[i] = ctt[i].rsplit('(元)')[0]
+            elif ctt[i].endswith(' (元)'):
+                ctt[i] = ctt[i].rsplit(' (元)')[0]
+            elif ctt[i].endswith('元。'):
+                ctt[i] = ctt[i].rsplit('元。')[0]
+            elif ctt[i].endswith('元'):
+                ctt[i] = ctt[i].rsplit('元')[0]
+                if ctt[i].isdigit():
+                    ctt[i] = int(ctt[i])/10000 
+                elif ctt[i].count('.') == 1 and ctt[i][0].isdigit():
+                    ctt[i] = float(ctt[i])/10000 
+                # else:
+                #     ctt[i] += '元'
+        for i in (2, 5):
+            if not ctt[i].endswith('公司'):
+                ndx = ctt[i].rfind('公司') + len('公司')
+                ctt[i] = ctt[i][:ndx]
+        newPro.name, newPro.price, newPro.company, newPro.owner, newPro.supervisor, newPro.biddingServer = \
+            [ctt[i] for i in range(len(ctt))]
+        projects.append(newPro)
+
+    return projects
+
 def export(projects):
     name, price, company, owner, supervisor, biddingServer = ([] for x in range(6))
     for proj in projects:
@@ -177,14 +263,15 @@ def export(projects):
         owner.append(proj.owner)
         supervisor.append(proj.supervisor)
         biddingServer.append(proj.biddingServer)
-    data = {'项目名称':name, '中标金额（万元）':price, '中标单位名称':company, 
+    data = {'项目名称':name, '中标金额（元）':price, '中标单位名称':company, 
             '招标人':owner,'监督部门':supervisor,'招标代理':biddingServer}
     df = pd.DataFrame(data)
     df.to_csv('projects.csv')
 
-getLinks()
-# projects = getContent()
-# export(projects)
+# getLinks()
+# projects = getContent_A()
+projects = getContent_B()
+export(projects)
 
 # https://requests-html.kennethreitz.org//index.html
 # https://changsha.hnsggzy.com/queryContent_356-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime=#
@@ -207,3 +294,4 @@ getLinks()
 # body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td
 # body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table:nth-child(4) > tbody > tr:nth-child(2) > td:nth-child(2)
 # body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table:nth-child(8)
+#content-box-id > table:nth-child(10) > tbody > tr:nth-child(2) > td:nth-child(2) > p > span
