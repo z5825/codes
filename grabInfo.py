@@ -1,25 +1,6 @@
 from requests_html import HTMLSession
 import pandas as pd
 
-def getLinks():
-    ses = HTMLSession()
-    strFix = 'http://fwpt.csggzy.cn/jyxxfjjggg/index'
-    strVar = ['.jhtml']
-    for i in range(2, 16):
-        strVar.append('_' + str(i) + '.jhtml')
-    lks = []
-    content = []
-    for sVar in strVar:
-        urls = strFix + sVar
-        r = ses.get(urls)
-        toGet = 'body > div.bg-main > div.container-div.jyxx > div > div.right-nr > div.main-list > ul > li > p.list-leftp > a'
-        results = r.html.find(toGet)
-        for x in results:
-            if '总承包' in x.text or '施工' in x.text or 'EPC' in x.text:
-                lks.append(x.absolute_links)
-                content.append(x.text)
-    return lks, content
-
 class Project(object):
     def __init__(self, sn = 1):
         self.sn = sn
@@ -30,18 +11,66 @@ class Project(object):
                 +'\n'+ str(self.biddingServer) +'\n'+ str(self.owner)
         return x
 
-def getContent():
-    lks, content = getLinks()
-    projects = []
-    dictionary = []
+def getLinks():
     ses = HTMLSession()
-    # lks = [{'http://fwpt.csggzy.cn/jyxxfjjggg/25780.jhtml'}]
+    links = []
+
+    strFix = 'http://fwpt.csggzy.cn/jyxxfjjggg/index'
+    strVar = ['.jhtml']
+    for i in range(2, 16):
+        strVar.append('_' + str(i) + '.jhtml')
+    for sVar in strVar:
+        urls = strFix + sVar
+        r = ses.get(urls)
+        toGet = 'body > div.bg-main > div.container-div.jyxx > div > div.right-nr > div.main-list > ul > li > p.list-leftp > a'
+        results = r.html.find(toGet)
+        for x in results:
+           if '勘察' not in x.text and '监理' not in x.text and '咨询' not in x.text:
+               if '设计' in x.text:
+                   if '总承包' in x.text or '施工' in x.text:
+                    links.append(x.absolute_links)
+               else: links.append(x.absolute_links)
+
+    strFix = 'https://changsha.hnsggzy.com/queryContent'
+    postfix = '-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E7%BB%93%E6%9E%9C%E5%85%AC%E5%91%8A&beginTime=&endTime='
+    strVar = [strFix + postfix]
+    strVar.append('https://changsha.hnsggzy.com/queryContent_2788-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E7%BB%93%E6%9E%9C%E5%85%AC%E5%91%8A&beginTime=&endTime=')
+
+    for i in range(2, 279):
+        strVar.append('_' + str(i) + postfix)
+    for sVar in strVar:
+        urls = strFix + sVar
+        r = ses.get(urls)
+        toGet = 'body > div.content-warp > div.jyxxcontent > div > ul > li '
+        results = r.html.find(toGet)
+        for x in results:
+            text = x.text.replace(' ', '')
+            text = x.text.replace('\n', '')
+            if '勘察' not in text and '监理' not in text and '咨询' not in text:
+               if '设计' in text:
+                   if '总承包' in text or '施工' in text:
+                    links.append(x.absolute_links)
+               else: links.append(x.absolute_links)
+
+    # print(len(links))
+    with open('sites.txt', 'a') as f:
+        for url in links:
+            url = url.pop()+'\n'
+            f.writelines(url)
+
+def getContent():
+    with open('sites.txt', 'r') as f:
+        links = f.readlines()
+        for i in range(len(links)):
+            links[i] = links[i].rstrip('\n')
+    projects = []
+    ses = HTMLSession()
+    # links = [{'http://fwpt.csggzy.cn/jyxxfjjggg/25780.jhtml'}]
 
     sn = 1
-    for lk in lks:
+    for url in links:
         newPro = Project(sn)
         sn += 1
-        url = lk.pop()
         r = ses.get(url)
         
         toFind = '项目名称'
@@ -49,7 +78,6 @@ def getContent():
         if len(result) != 0:
             newPro.name = result[0].text.replace('\n','')
             ndx = newPro.name.find(toFind) + len(toFind)
-            newPro.name = newPro.name[ndx:]
 
         toFind = '中标价格'
         result = r.html.find('p', containing = toFind)
@@ -64,7 +92,7 @@ def getContent():
                 newPro.price = result[0].text.replace('\n','')
                 ndx = newPro.price.find(toFind) + len(toFind)
                 newPro.price = newPro.price[ndx:]
-
+        
         toFind = '中标单位名称'
         result = r.html.find('p', containing = toFind)
         if len(result) != 0:
@@ -92,11 +120,6 @@ def getContent():
             newPro.supervisor = result[0].text.replace('\n','')
             ndx = newPro.supervisor.find(toFind) + len(toFind)
             newPro.supervisor = newPro.supervisor[ndx:]
-        # else:
-        #     toFind = '招标投标管理'
-        #     result = r.html.find('p', containing = '招标投标管理')
-        #     if len(result) != 0:
-        #         newPro.supervisor = result[0].text.replace('\n','')
 
         toFind = '招标代理'
         result = r.html.find('p', containing = toFind)
@@ -105,36 +128,82 @@ def getContent():
             ndx = newPro.biddingServer.find(toFind) + len(toFind)
             newPro.biddingServer = newPro.biddingServer[ndx:]
 
-        entry = {'项目名称':newPro.name,'中标金额':newPro.price,'中标单位名称':newPro.company, \
-                    '招标人':newPro.owner,'监督部门':newPro.supervisor,'招标代理':newPro.biddingServer}
-        dictionary.append(entry)
+        ctt = [newPro.name, newPro.price, newPro.company, \
+                newPro.owner, newPro.supervisor, newPro.biddingServer]
+        for i in range(len(ctt)):
+            ndx = ctt[i].find('：')
+            if ndx != -1:
+                ctt[i] = ctt[i][ndx + 1:]
+            else:
+                ndx = ctt[i].find(':')
+                if ndx != -1:
+                    ctt[i] = ctt[i][ndx + 1:]
+                
+        for i in (1,):
+            if ctt[i].endswith('万元'):
+                ctt[i] = ctt[i].rsplit('万元')[0]
+            elif ctt[i].endswith('（元）'):
+                ctt[i] = ctt[i].rsplit('（元）')[0]
+            elif ctt[i].endswith('(元)'):
+                ctt[i] = ctt[i].rsplit('(元)')[0]
+            elif ctt[i].endswith(' (元)'):
+                ctt[i] = ctt[i].rsplit(' (元)')[0]
+            elif ctt[i].endswith('元。'):
+                ctt[i] = ctt[i].rsplit('元。')[0]
+            elif ctt[i].endswith('元'):
+                ctt[i] = ctt[i].rsplit('元')[0]
+                if ctt[i].isdigit():
+                    ctt[i] = int(ctt[i])/10000 
+                elif ctt[i].count('.') == 1 and ctt[i][0].isdigit():
+                    ctt[i] = float(ctt[i])/10000 
+                # else:
+                #     ctt[i] += '元'
+        for i in (2, 5):
+            if not ctt[i].endswith('公司'):
+                ndx = ctt[i].rfind('公司') + len('公司')
+                ctt[i] = ctt[i][:ndx]
+        newPro.name, newPro.price, newPro.company, newPro.owner, newPro.supervisor, newPro.biddingServer = \
+            [ctt[i] for i in range(len(ctt))]
         projects.append(newPro)
-       
+
+    return projects
+
+def export(projects):
+    name, price, company, owner, supervisor, biddingServer = ([] for x in range(6))
+    for proj in projects:
+        name.append(proj.name)
+        price.append(proj.price)
+        company.append(proj.company)
+        owner.append(proj.owner)
+        supervisor.append(proj.supervisor)
+        biddingServer.append(proj.biddingServer)
+    data = {'项目名称':name, '中标金额（万元）':price, '中标单位名称':company, 
+            '招标人':owner,'监督部门':supervisor,'招标代理':biddingServer}
+    df = pd.DataFrame(data)
+    df.to_csv('projects.csv')
+
+getLinks()
+# projects = getContent()
+# export(projects)
+
+# https://requests-html.kennethreitz.org//index.html
+# https://changsha.hnsggzy.com/queryContent_356-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime=#
+# 施工 总承包 项目 标段 工程  ） 
+
     # for p in projects:
     #     print(p)
     #     if input('type quit to quit:') == 'quit':
     #         break
-    
-    return dictionary, projects
-
-def export(records):
-    name, price, company, owner, supervisor, biddingServer = ([] for x in range(6))
-    for rcd in records:
-        name.append(rcd.name)
-        price.append(rcd.price)
-        company.append(rcd.company)
-        owner.append(rcd.owner)
-        supervisor.append(rcd.supervisor)
-        biddingServer.append(rcd.biddingServer)
-        # df.append(pd.DataFrame(rcd), ignore_index = True)
-    data = {'项目名称':name, '中标金额':price, '中标单位名称':company, 
-            '招标人':owner,'监督部门':supervisor,'招标代理':biddingServer}
-    df = pd.DataFrame(data)
-    df.to_excel('projects.xlsx', sheet_name='1', index=False)
-    # print(df)
-
-dictionary, projects = getContent()
-export(projects)
-
-# https://requests-html.kennethreitz.org//index.html
-# https://changsha.hnsggzy.com/queryContent_356-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime=#
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table:nth-child(22) > tbody > tr:nth-child(2) > td:nth-child(1) > p > span
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table:nth-child(22) > tbody > tr:nth-child(2) > td:nth-child(2)
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table > tbody > tr:nth-child(2) > td:nth-child(2) > p > span
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table > tbody > tr:nth-child(2) > td:nth-child(2)
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table > tbody > tr:nth-child(2) > td:nth-child(3)
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table > tbody > tr:nth-child(3) > td:nth-child(2)
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table > tbody > tr:nth-child(2) > td:nth-child(2)
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table:nth-child(22) > tbody > tr.firstRow > td:nth-child(2) > p > span
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table:nth-child(8) > tbody > tr:nth-child(2) > td:nth-child(2) > p > span
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table:nth-child(4) > tbody > tr:nth-child(2) > td:nth-child(2)
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table:nth-child(4) > tbody > tr:nth-child(2) > td:nth-child(2)
+# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table:nth-child(8)
