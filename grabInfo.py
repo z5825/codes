@@ -269,7 +269,6 @@ def getContent_B():
 
     return projects
 
-
 def getContent_C():
     with open('sites_C.txt', 'r') as f:
         links = f.readlines()
@@ -278,14 +277,18 @@ def getContent_C():
     
     projects = []
     ses = HTMLSession()
-    links.insert(0, 'https://changsha.hnsggzy.com/jygksz/1048644.jhtml')
+    # links.insert(0, 'https://changsha.hnsggzy.com/jygksz/1048644.jhtml')
     sn = 1
     for url in links:
         time.sleep(random.random()*5)
         newPro = Project(sn)
         sn += 1
+        if sn % 100 == 0:
+            print('the record: %d ' %sn)
         r = ses.get(url)
-        
+        if r.status_code == 404:
+            continue
+
         toFind = 'body > div.content-warp > div.content > div.content-title2 > span:nth-child(1)'
         result = r.html.find(toFind)
         if len(result) != 0:
@@ -298,103 +301,96 @@ def getContent_C():
 
         toFind = '招标人：'
         result = r.html.find('p', containing = toFind)
+        if len(result) == 0:
+            toFind = '标 人：' 
+            result = r.html.find('p', containing = toFind)
+            if len(result) == 0:
+                toFind = '标\xa0人：' 
+                result = r.html.find('p', containing = toFind)
         if len(result) != 0:
             newPro.owner = result[0].text.replace('\n','')
             ndx = newPro.owner.find(toFind) + len(toFind)
             newPro.owner = newPro.owner[ndx:]
-        else:
-            toFind = '招 标 人：'
-            result = r.html.find('p', containing = toFind)
-            if len(result) != 0:
-                newPro.owner = result[0].text.replace('\n','')
-                ndx = newPro.owner.find(toFind) + len(toFind)
-                newPro.owner = newPro.owner[ndx:]
 
         toFind = '监督部门：' 
         result = r.html.find('p', containing = toFind)
+        if len(result) == 0:
+            toFind = '监管部门：' 
+            result = r.html.find('p', containing = toFind)
         if len(result) != 0:
             newPro.supervisor = result[0].text.replace('\n','')
             ndx = newPro.supervisor.find(toFind) + len(toFind)
             newPro.supervisor = newPro.supervisor[ndx:]
 
-        # s='#content-box-id > table:nth-child(10) > tbody > tr.firstRow > td:nth-child(1) > p > span'
-        # s='body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody'
-        # s='body > div.content-warp > div.content > div.content-article > div.div-article2 > table:nth-child(9) > tbody > tr:nth-child(1) > td:nth-child(1) > p > span:nth-child(1)'
-        # s='body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table:nth-child(9) > tbody > tr:nth-child(1) > td:nth-child(1) > p > span:nth-child(1)'
-        # s = 'body > div.content-warp > div.content > div.content-article > div.div-article2 > table'
-        # result = r.html.find(s)
-        result = r.html.find('p', containing = '中标候选人名称')
-        print(type(result))
-
-
-        s1 = 'body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table'
-        si = ''
-        s2 = ' > tbody > tr.firstRow > td:nth-child(1) > p > span'
-        for i in range(20):
-            result = r.html.find(s1 + si + s2)
-            if len(result) != 0 and result[0].text == '中标候选人':
-                break
-            else:
-                s2 = ' > tbody > tr:nth-child(1) > td:nth-child(1) > p > span:nth-child(1)'
-                result = r.html.find(s1 + si + s2)
-                if len(result) != 0 and result[0].text == '中标候选人':
-                    break
-                else:
-                    si = ':nth-child(' + str(i) + ')'
-
-# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table:nth-child(9) > tbody > tr:nth-child(1) > td:nth-child(1) > p > span:nth-child(1)
-        toFind = s1 + si + '> tbody > tr:nth-child(3) > td:nth-child(2) > p > span'
+        toFind = 'body > div.content-warp > div.content > div.content-article > div.div-article2 > table '
         result = r.html.find(toFind)
         if len(result) != 0:
-            newPro.price = result[0].text.replace('\n','')
-        
-        toFind = s1 + si + '> tbody > tr:nth-child(2) > td:nth-child(2) > p > span'
-        result = r.html.find(toFind)
-        if len(result) != 0:
-            newPro.company = result[0].text.replace('\n','')
+            txt = result[0].text
+            n1 = txt.find('\n', txt.find('中标候选人名称')) + len('\n')
+            n2 = txt.find('\n', n1)
+            newPro.company = txt[n1:n2]
 
+            se1 = '报价（'
+            p1 = txt.find(se1)
+            if p1 == -1:
+                se1 = '报价'
+                p1 = txt.find(se1)
+            if p1 != -1:
+                n1 = txt.find('\n', p1) + len('\n')
+                n2 = txt.find('\n', n1)
+                if '万' in txt[p1: p1 + len('s1') + 5]:
+                    w = 10000
+                else: w = 1
+                newPro.price = txt[n1:n2].strip()
+                if newPro.price.endswith('元'):
+                    newPro.price = newPro.price.rsplit('元')[0]
+                ndot = newPro.price.find('.')
+                if newPro.price[:ndot].isdigit() and newPro.price[ndot + 1:].isdigit():
+                    newPro.price = str(float(newPro.price) * w)
         
-        ctt = [newPro.name, newPro.price, newPro.company, \
-                newPro.owner, newPro.supervisor, newPro.biddingServer, newPro.time]
-        for i in range(len(ctt)):
-            ndx = ctt[i].find('：')
-            if ndx != -1:
-                ctt[i] = ctt[i][ndx + 1:]
-            else:
-                ndx = ctt[i].find(':')
-                if ndx != -1:
-                    ctt[i] = ctt[i][ndx + 1:]
+        # ctt = [newPro.name, newPro.price, newPro.company, \
+        #         newPro.owner, newPro.supervisor, newPro.biddingServer, newPro.time]
+        # for i in range(len(ctt)):
+        #     ndx = ctt[i].find('：')
+        #     if ndx != -1:
+        #         ctt[i] = ctt[i][ndx + 1:]
+        #     else:
+        #         ndx = ctt[i].find(':')
+        #         if ndx != -1:
+        #             ctt[i] = ctt[i][ndx + 1:]
                 
-        for i in (1,):
-            if ctt[i].endswith('万元'):
-                ctt[i] = ctt[i].rsplit('万元')[0]
-            elif ctt[i].endswith('（元）'):
-                ctt[i] = ctt[i].rsplit('（元）')[0]
-            elif ctt[i].endswith('(元)'):
-                ctt[i] = ctt[i].rsplit('(元)')[0]
-            elif ctt[i].endswith(' (元)'):
-                ctt[i] = ctt[i].rsplit(' (元)')[0]
-            elif ctt[i].endswith('元。'):
-                ctt[i] = ctt[i].rsplit('元。')[0]
-            elif ctt[i].endswith('元'):
-                ctt[i] = ctt[i].rsplit('元')[0]
-                if ctt[i].isdigit():
-                    ctt[i] = int(ctt[i])/10000 
-                elif ctt[i].count('.') == 1 and ctt[i][0].isdigit():
-                    ctt[i] = float(ctt[i])/10000 
-                # else:
-                #     ctt[i] += '元'
-        for i in (2, 5):
-            if not ctt[i].endswith('公司'):
-                ndx = ctt[i].rfind('公司') + len('公司')
-                ctt[i] = ctt[i][:ndx]
-        newPro.name, newPro.price, newPro.company, newPro.owner, newPro.supervisor, newPro.biddingServer, newPro.time = \
-            [ctt[i] for i in range(len(ctt))]
+        # for i in (1,):
+        #     if ctt[i].endswith('万元'):
+        #         ctt[i] = ctt[i].rsplit('万元')[0]
+        #     elif ctt[i].endswith('（元）'):
+        #         ctt[i] = ctt[i].rsplit('（元）')[0]
+        #     elif ctt[i].endswith('(元)'):
+        #         ctt[i] = ctt[i].rsplit('(元)')[0]
+        #     elif ctt[i].endswith(' (元)'):
+        #         ctt[i] = ctt[i].rsplit(' (元)')[0]
+        #     elif ctt[i].endswith('元。'):
+        #         ctt[i] = ctt[i].rsplit('元。')[0]
+        #     elif ctt[i].endswith('元'):
+        #         ctt[i] = ctt[i].rsplit('元')[0]
+        #         if ctt[i].isdigit():
+        #             ctt[i] = int(ctt[i])/10000 
+        #         elif ctt[i].count('.') == 1 and ctt[i][0].isdigit():
+        #             ctt[i] = float(ctt[i])/10000 
+        #         # else:
+        #         #     ctt[i] += '元'
+        # for i in (2, 5):
+        #     if not ctt[i].endswith('公司'):
+        #         ndx = ctt[i].rfind('公司') + len('公司')
+        #         ctt[i] = ctt[i][:ndx]
+        # newPro.name, newPro.price, newPro.company, newPro.owner, newPro.supervisor, newPro.biddingServer, newPro.time = \
+        #     [ctt[i] for i in range(len(ctt))]
         projects.append(newPro)
+        if sn % 100 == 0 or sn == len(links):
+            export(projects[sn-100 : sn], '%s-%s' %(sn-100, sn-1))
 
     return projects
 
-def export(projects):
+def export(projects, fname):
     name, price, company, owner, supervisor, biddingServer, time = ([] for x in range(7))
     for proj in projects:
         name.append(proj.name)
@@ -407,16 +403,13 @@ def export(projects):
     data = {'项目名称':name, '中标金额（元）':price, '中标单位名称':company, 
             '招标人':owner,'监督部门':supervisor,'招标代理':biddingServer, '时间':time}
     df = pd.DataFrame(data)
-    df.to_csv('projects.csv')
+    df.to_csv(fname + '.csv')
 
 # getLinks()
 # projects = getContent_A()
 # projects = getContent_B()
 projects = getContent_C()
-export(projects)
+# export(projects)
 
 
-# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table > tbody > tr.firstRow > td:nth-child(1) > p > span
-# body > div.content-warp > div.content > div.content-article > div.div-article2 > table > tbody > tr > td > table:nth-child(5) > tbody > tr.firstRow > td:nth-child(1) > p > span
-# https://requests-html.kennethreitz.org//index.html
 # https://changsha.hnsggzy.com/queryContent_356-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime=#
