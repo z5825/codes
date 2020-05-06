@@ -182,28 +182,38 @@ def getContent_B():
         sn += 1
         r = ses.get(url)
         
-        toFind = '项目名称'
-        result = r.html.find('#publicity_content > table > tbody > tr:nth-child(1) > td.xmmc')
+        s1 = '#content-box-id > table'
+        si = ''
+        s2 = ' > tbody > tr.firstRow > td:nth-child(1) > p > span'
+        for i in range(15):
+            result = r.html.find(s1 + si + s2)
+            if result[0].text == '中标候选人':
+                break
+            else:
+                si = ':nth-child(' + str(i) + ')'
+
+        toFind = '#publicity_content > table' + si + '> tbody > tr:nth-child(1) > td.xmmc'
+        result = r.html.find(toFind)
         if len(result) != 0:
             newPro.name = result[0].text.replace('\n','')
 
-        toFind = '中标价格'
-        result = r.html.find('#content-box-id > table:nth-child(10) > tbody > tr:nth-child(3) > td:nth-child(2) > p > span')
+        toFind = '#content-box-id > table' + si + '> tbody > tr:nth-child(3) > td:nth-child(2) > p > span'
+        result = r.html.find(toFind)
         if len(result) != 0:
             newPro.price = result[0].text.replace('\n','')
         
-        toFind = '中标单位名称'
-        result = r.html.find('#content-box-id > table:nth-child(10) > tbody > tr:nth-child(2) > td:nth-child(2) > p > span')
+        toFind = '#content-box-id > table' + si + '> tbody > tr:nth-child(2) > td:nth-child(2) > p > span'
+        result = r.html.find(toFind)
         if len(result) != 0:
             newPro.company = result[0].text.replace('\n','')
 
-        toFind = '招标人'
-        result = r.html.find('#publicity_content > table > tbody > tr:nth-child(2) > td:nth-child(4)')
+        toFind = '#publicity_content > table' + si + '> tbody > tr:nth-child(2) > td:nth-child(4)'
+        result = r.html.find(toFind)
         if len(result) != 0:
             newPro.owner = result[0].text.replace('\n','')
 
-        toFind = '监督部门'
-        result = r.html.find('#publicity_content > table > tbody > tr:nth-child(3) > td:nth-child(4)')
+        toFind = '#publicity_content > table' + si + '> tbody > tr:nth-child(3) > td:nth-child(4)'
+        result = r.html.find(toFind)
         if len(result) != 0:
             newPro.supervisor = result[0].text.replace('\n','')
 
@@ -272,6 +282,12 @@ def export(projects):
 # projects = getContent_A()
 projects = getContent_B()
 export(projects)
+
+#content-box-id > table > tbody > tr:nth-child(2) > td:nth-child(2) > p > span
+#content-box-id > table:nth-child(9) > tbody > tr:nth-child(2) > td:nth-child(2) > p
+#content-box-id > table:nth-child(9) > tbody > tr:nth-child(3) > td:nth-child(2) > p > span
+
+
 
 # https://requests-html.kennethreitz.org//index.html
 # https://changsha.hnsggzy.com/queryContent_356-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime=#
