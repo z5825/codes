@@ -280,7 +280,7 @@ def getContent_C():
     # links.insert(0, 'https://changsha.hnsggzy.com/jygksz/1048644.jhtml')
     sn = 1
     for url in links:
-        time.sleep(random.random()*5)
+        time.sleep(random.random()*3)
         newPro = Project(sn)
         sn += 1
         if sn % 100 == 0:
@@ -385,8 +385,10 @@ def getContent_C():
         # newPro.name, newPro.price, newPro.company, newPro.owner, newPro.supervisor, newPro.biddingServer, newPro.time = \
         #     [ctt[i] for i in range(len(ctt))]
         projects.append(newPro)
-        if sn % 100 == 0 or sn == len(links):
+        # if sn % 100 == 0 or sn == len(links):
+        if sn % 100 == 0 or sn == 140:
             export(projects[sn-100 : sn], '%s-%s' %(sn-100, sn-1))
+        
 
     return projects
 
