@@ -1,3 +1,0 @@
-http://175.6.46.113/spweb/CS/ContentController/content.do?id=400a45c2-c0bc-4dae-9e44-d56c32a0cf19&projectType=GCJS&huanjie=PUBLICITY&noticeType=PUBLICITY
-http://175.6.46.113/spweb/CS/ContentController/content.do?id=dd2fe2be-494d-4435-b487-2e6d5089cfbc&projectType=GCJS&huanjie=PUBLICITY&noticeType=PUBLICITY
-http://175.6.46.113/spweb/CS/ContentController/content.do?id=b979a2b5-1a9b-4839-bed3-c7ad86f8b42f&projectType=GCJS&huanjie=PUBLICITY&noticeType=PUBLICITY
