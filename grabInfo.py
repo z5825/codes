@@ -16,50 +16,85 @@ def getLinks():
     ses = HTMLSession()
     links = []
 
-    strFix = 'http://fwpt.csggzy.cn/jyxxfjjggg/index'
-    strVar = ['.jhtml']
-    for i in range(2, 16):
-        strVar.append('_' + str(i) + '.jhtml')
-    for sVar in strVar:
-        time.sleep(random.random()*3)
-        urls = strFix + sVar
-        r = ses.get(urls)
-        toGet = 'body > div.bg-main > div.container-div.jyxx > div > div.right-nr > div.main-list > ul > li > p.list-leftp > a'
-        results = r.html.find(toGet)
-        for x in results:
-            if '勘察' not in x.text and '监理' not in x.text and '咨询' not in x.text and '检测' not in x.text and '监控' not in x.text:
-                if '设计' in x.text:
-                   if '总承包' in x.text or '施工' in x.text:
-                    links.append(x.absolute_links)
-                else: links.append(x.absolute_links)
+    # strFix = 'http://fwpt.csggzy.cn/jyxxfjjggg/index'
+    # strVar = ['.jhtml']
+    # for i in range(2, 16):
+    #     strVar.append('_' + str(i) + '.jhtml')
+    # for sVar in strVar:
+    #     time.sleep(random.random()*3)
+    #     urls = strFix + sVar
+    #     r = ses.get(urls)
+    #     toGet = 'body > div.bg-main > div.container-div.jyxx > div > div.right-nr > div.main-list > ul > li > p.list-leftp > a'
+    #     results = r.html.find(toGet)
+    #     for x in results:
+    #         if '勘察' not in x.text and '监理' not in x.text and '咨询' not in x.text and '检测' not in x.text and '监控' not in x.text:
+    #             if '设计' in x.text:
+    #                if '总承包' in x.text or '施工' in x.text:
+    #                 links.append(x.absolute_links)
+    #             else: links.append(x.absolute_links)
+    # with open('sites_A.txt', 'a') as f:
+    #     for url in links:
+    #         url = url.pop()+'\n'
+    #         f.writelines(url)
 
-    strFix = 'https://changsha.hnsggzy.com/queryContent'
-    postfix = '-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime='
-    strVar = [strFix + postfix]
-    strVar.append('https://changsha.hnsggzy.com/queryContent_3563-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime=')
+        # strFix = 'https://changsha.hnsggzy.com/queryContent'
+    # postfix = '-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime='
+    # strVar = [strFix + postfix]
+    # strVar.append('https://changsha.hnsggzy.com/queryContent_3563-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime=')
 
-    for i in range(2, 357):
-        strVar.append('_' + str(i) + postfix)
-    for sVar in strVar:
-        time.sleep(random.random()*3)
-        urls = strFix + sVar
-        r = ses.get(urls)
-        toGet = 'body > div.content-warp > div.jyxxcontent > div > ul > li '
-        results = r.html.find(toGet)
-        for x in results:
-            text = x.text.replace(' ', '')
-            text = x.text.replace('\n', '')
-            if '勘察' not in x.text and '监理' not in x.text and '咨询' not in x.text and '检测' not in x.text and '监控' not in x.text:
-                if '设计' in text:
-                   if '总承包' in text or '施工' in text:
-                    links.append(x.absolute_links)
-                else: links.append(x.absolute_links)
+    # for i in range(2, 5):
+    #     strVar.append('_' + str(i) + postfix)
+    # for sVar in strVar:
+    #     time.sleep(random.random()*3)
+    #     urls = strFix + sVar
+    urls = 'http://175.6.46.113/spweb/CS/TradeCenter/tradeList.do?Deal_Type=Deal_Type1'
+    r = ses.get(urls)
+    toGet = 'body > div.content-warp > div.jyxxcontent > div > ul > li '
+    r.html.render()
+    results = r.html.find('a', containing = 'hnsggzy')
 
-    # print(len(links))
-    with open('sites_C.txt', 'a') as f:
-        for url in links:
-            url = url.pop()+'\n'
-            f.writelines(url)
+    
+    print(results)
+#     for x in results:
+#         text = x.text.replace(' ', '')
+#         text = x.text.replace('\n', '')
+#         if '勘察' not in x.text and '监理' not in x.text and '咨询' not in x.text and '检测' not in x.text and '监控' not in x.text:
+#             if '设计' in text:
+#                if '总承包' in text or '施工' in text:
+#                 links.append(x.absolute_links)
+#             else: links.append(x.absolute_links)
+
+    # with open('sites_B.txt', 'a') as f:
+    #     for url in links:
+    #         url = url.pop()+'\n'
+    #         f.writelines(url)
+
+    # strFix = 'https://changsha.hnsggzy.com/queryContent'
+    # postfix = '-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime='
+    # strVar = [strFix + postfix]
+    # strVar.append('https://changsha.hnsggzy.com/queryContent_3563-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime=')
+
+    # for i in range(2, 357):
+    #     strVar.append('_' + str(i) + postfix)
+    # for sVar in strVar:
+    #     time.sleep(random.random()*3)
+    #     urls = strFix + sVar
+    #     r = ses.get(urls)
+    #     toGet = 'body > div.content-warp > div.jyxxcontent > div > ul > li '
+    #     results = r.html.find(toGet)
+    #     for x in results:
+    #         text = x.text.replace(' ', '')
+    #         text = x.text.replace('\n', '')
+    #         if '勘察' not in x.text and '监理' not in x.text and '咨询' not in x.text and '检测' not in x.text and '监控' not in x.text:
+    #             if '设计' in text:
+    #                if '总承包' in text or '施工' in text:
+    #                 links.append(x.absolute_links)
+    #             else: links.append(x.absolute_links)
+
+    # with open('sites_C.txt', 'a') as f:
+    #     for url in links:
+    #         url = url.pop()+'\n'
+    #         f.writelines(url)
 
 def getContent_A():
     with open('sites.txt', 'r') as f:
@@ -388,7 +423,8 @@ def getContent_C():
         # if sn % 100 == 0 or sn == len(links):
         if sn % 100 == 0 or sn == 140:
             export(projects[sn-100 : sn], '%s-%s' %(sn-100, sn-1))
-        
+            if sn == 140:
+                break
 
     return projects
 
@@ -407,10 +443,10 @@ def export(projects, fname):
     df = pd.DataFrame(data)
     df.to_csv(fname + '.csv')
 
-# getLinks()
+getLinks()
 # projects = getContent_A()
 # projects = getContent_B()
-projects = getContent_C()
+# projects = getContent_C()
 # export(projects)
 
 
