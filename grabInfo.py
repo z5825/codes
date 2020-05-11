@@ -1,11 +1,12 @@
 from requests_html import HTMLSession
+from requests_html import HTML
 import pandas as pd
 import time, random
 
 class Project(object):
     def __init__(self, sn = 1):
         self.sn = sn
-        self.name = self.supervisor = self.biddingServer = self.owner = self.time = '/'
+        self.name = self.supervisor = self.biddingServer = self.owner = self.time = self.evalMethod = '/'
         self.candidates, self.prices = [''] * 3, [''] * 3
 
     def __str__(self):
@@ -38,50 +39,28 @@ def getLinks():
     #         url = url.pop()+'\n'
     #         f.writelines(url)
 
-        # strFix = 'https://changsha.hnsggzy.com/queryContent'
-    # postfix = '-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime='
-    # strVar = [strFix + postfix]
-    # strVar.append('https://changsha.hnsggzy.com/queryContent_3563-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime=')
+    with open('fromColTableInfo.xml', encoding='utf-8') as f:
+        refs = f.read()
+    links = []
+    html = HTML(html = refs)
+    results = html.find('a')
+    for x in results:
+        if '勘察' not in x.text and '咨询' not in x.text and '检测' not in x.text and '监控' not in x.text:
+            if '设计' in x.text:
+               if '总承包' in x.text or '施工' in x.text:
+                links.append(x.absolute_links)
+            else: links.append(x.absolute_links)
 
-    # for i in range(2, 5):
-    #     strVar.append('_' + str(i) + postfix)
-    # for sVar in strVar:
-    #     time.sleep(random.random()*3)
-    #     urls = strFix + sVar
-    urls = 'http://175.6.46.113/spweb/CS/TradeCenter/tradeList.do?Deal_Type=Deal_Type1'
-    r = ses.get(urls)
-    # links = r.html.links
-    # print(len(links))
-    # toGet = 'body > div.content-warp > div.jyxxcontent > div > ul > li '
-    # toGet = 'body > div.webtopbg > div.container > div > div.page-content.clearfix > div > div.main-other > div.list-pro-box.clearfix > div.project-list.fr > div > div.bd > table > thead'
-    # toGet = '.txt-ell w720 ml20'
-    # txt-ell w720 ml20
-    #index-list > tr:nth-child(2) > td:nth-child(1) > a
-    #index-list > tr:nth-child(2) > td:nth-child(1) > a
-    #index-list > tr:nth-child(4) > td:nth-child(1) > a
-    results = r.html.find(toGet)
-    print(len(results))
-    
-    print(results[0].text)
-    
-
-    # r.html.render()
-    # links = r.html.links
-    # print(len(links))
-    # print(results)
-#     for x in results:
-#         text = x.text.replace(' ', '')
-#         text = x.text.replace('\n', '')
-#         if '勘察' not in x.text and '监理' not in x.text and '咨询' not in x.text and '检测' not in x.text and '监控' not in x.text:
-#             if '设计' in text:
-#                if '总承包' in text or '施工' in text:
-#                 links.append(x.absolute_links)
-#             else: links.append(x.absolute_links)
-
-    # with open('sites_B.txt', 'a') as f:
-    #     for url in links:
-    #         url = url.pop()+'\n'
-    #         f.writelines(url)
+    with open('sites_B.txt', 'a') as f:
+        forDup = set()
+        for url in links:
+            url = url.pop()+'\n'
+            url = url.replace('https://example.org/', 'http://175.6.46.113/')
+            url = url.replace('¬', '&not')
+            if url not in forDup:
+                forDup.add(url)
+                f.writelines(url)
+            
 
     # strFix = 'https://changsha.hnsggzy.com/queryContent'
     # postfix = '-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime='
@@ -237,6 +216,15 @@ def getContent_B():
         if r.status_code == 404 or r.status_code == 403:
             continue
 
+        toFind = '#content-box-id > p'
+        results = r.html.find(toFind)
+        if len(results) > 0:
+            for i in range(len(results)):
+                txt = results[i].text
+                if len(txt) > 10:
+                    n1, n2 = txt.find('采用'), txt.find('评标委员会') 
+                    newPro.evalMethod = txt[n1:n2]
+                    break
         toFind = '#publicity_contents > div.title > h2'
         result = r.html.find(toFind, first = True)
         if result is not None:
@@ -329,13 +317,17 @@ def getContent_B():
        
         projects.append(newPro)
         sn += 1
-        if len(links) < 30:
+        if len(links) < 300:
             pause = len(links)
-        else: pause = 30
+        else: pause = 300
+        if sn % (pause/10) == 0 or sn == len(links):
+            print('processed to: %d ' %sn)
         if sn % pause == 0 or sn == len(links):
-            print('the record: %d ' %sn)
+            print('export: %s-%s' %(sn-pause, sn-1))
             export(projects[sn-pause : sn], '%s-%s' %(sn-pause, sn-1))
             time.sleep(random.random()*20)
+            # if input('continue?') == 'n':
+            #     break
 
     return projects
 
@@ -464,8 +456,8 @@ def getContent_C():
     return projects
 
 def export(projects, fname):
-    name, price1, price2, price3, candidate1, candidate2, candidate3, owner, supervisor, biddingServer, time \
-        = ([] for x in range(11))
+    evalMethod, name, price1, price2, price3, candidate1, candidate2, candidate3, owner, supervisor, biddingServer, time \
+        = ([] for x in range(12))
     for proj in projects:
         time.append(proj.time)
         name.append(proj.name)
@@ -478,8 +470,9 @@ def export(projects, fname):
         price2.append(proj.prices[1])
         price3.append(proj.prices[2])
         biddingServer.append(proj.biddingServer)
+        evalMethod.append(proj.evalMethod)
     data = {'时间':time, '项目名称':name, '招标人':owner, '第一':candidate1, '第二':candidate2, '第三':candidate3, \
-            '投标报价1\n（万元）':price1, '报价2':price2, '报价3':price3, '监督部门':supervisor,'招标代理':biddingServer}
+            '投标报价1\n（万元）':price1, '报价2':price2, '报价3':price3, '监督部门':supervisor,'评标办法':evalMethod}
     df = pd.DataFrame(data)
     df.to_csv(fname + '.csv')
 
