@@ -1,4 +1,28 @@
-a = '据招标投标相关法律法规及招标文件的规定，白赛湖路（开田冲路-龙迴塘路）工程项目评标工作已经结束，本项目采用《湖南湘江新区政府性投资工程建设项目施工招标评标活动管理规定（试行）》（湘新建发[2016]228号）中规定的“ 综合评估法（Ⅰ）” 的评标办法，评标委员会推荐了以下3名中标候选人（排序 ），现将相关信息予以公示。'
-ndx1, ndx2 = a.find('采用'), a.find('评标委员会2') 
-b = a[ndx1: ndx2]
-print(b)
+from requests_html import HTMLSession
+import time, random
+
+def getLinks():
+    ses = HTMLSession()
+    links = []
+
+    strFix = 'http://searchs.hunan.gov.cn/hunan/hnxjxq/news?q=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&searchfields=&sm=&columnCN=&p='
+    for i in range(0, 70):
+        time.sleep(random.random()*3)
+        urls = strFix + str(i) + '&timetype='
+        r = ses.get(urls)
+        if r.status_code == 404 or r.status_code == 403:
+            continue
+        toGet = '#hits > li > div.com-title'
+        results = r.html.find(toGet)
+        for x in results:
+            if '勘察' not in x.text and '监理' not in x.text and '咨询' not in x.text and '检测' not in x.text and '监控' not in x.text:
+                if '设计' in x.text:
+                   if '总承包' in x.text or '施工' in x.text:
+                    links.append(x.absolute_links)
+                else: links.append(x.absolute_links)
+    with open('sites_D.txt', 'w') as f:
+        for url in links:
+            url = url.pop()+'\n'
+            f.writelines(url)
+
+getLinks()

@@ -39,28 +39,27 @@ def getLinks():
     #         url = url.pop()+'\n'
     #         f.writelines(url)
 
-    with open('fromColTableInfo.xml', encoding='utf-8') as f:
-        refs = f.read()
-    links = []
-    html = HTML(html = refs)
-    results = html.find('a')
-    for x in results:
-        if '勘察' not in x.text and '咨询' not in x.text and '检测' not in x.text and '监控' not in x.text:
-            if '设计' in x.text:
-               if '总承包' in x.text or '施工' in x.text:
-                links.append(x.absolute_links)
-            else: links.append(x.absolute_links)
+    # with open('fromColTableInfo.xml', encoding='utf-8') as f:
+    #     refs = f.read()
+    # links = []
+    # html = HTML(html = refs)
+    # results = html.find('a')
+    # for x in results:
+    #     if '勘察' not in x.text and '咨询' not in x.text and '检测' not in x.text and '监控' not in x.text:
+    #         if '设计' in x.text:
+    #            if '总承包' in x.text or '施工' in x.text:
+    #             links.append(x.absolute_links)
+    #         else: links.append(x.absolute_links)
 
-    with open('sites_B.txt', 'w') as f:
-        forDup = set()
-        for url in links:
-            url = url.pop()+'\n'
-            url = url.replace('https://example.org/', 'http://175.6.46.113/')
-            url = url.replace('¬', '&not')
-            if url not in forDup:
-                forDup.add(url)
-                f.writelines(url)
-            
+    # with open('sites_B.txt', 'w') as f:
+    #     forDup = set()
+    #     for url in links:
+    #         url = url.pop()+'\n'
+    #         url = url.replace('https://example.org/', 'http://175.6.46.113/')
+    #         url = url.replace('¬', '&not')
+    #         if url not in forDup:
+    #             forDup.add(url)
+    #             f.writelines(url)
 
     # strFix = 'https://changsha.hnsggzy.com/queryContent'
     # postfix = '-jygk.jspx?title=&origin=&inDates=&channelId=161&ext=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&beginTime=&endTime='
@@ -88,6 +87,26 @@ def getLinks():
     #     for url in links:
     #         url = url.pop()+'\n'
     #         f.writelines(url)
+
+    strFix = 'http://searchs.hunan.gov.cn/hunan/hnxjxq/news?q=%E4%B8%AD%E6%A0%87%E5%80%99%E9%80%89%E4%BA%BA%E5%85%AC%E7%A4%BA&searchfields=&sm=&columnCN=&p='
+    for i in range(0, 70):
+        time.sleep(random.random()*3)
+        urls = strFix + str(i) + '&timetype='
+        r = ses.get(urls)
+        if r.status_code == 404 or r.status_code == 403:
+            continue
+        toGet = '#hits > li > div.com-title'
+        results = r.html.find(toGet)
+        for x in results:
+            if '勘察' not in x.text and '监理' not in x.text and '咨询' not in x.text and '检测' not in x.text and '监控' not in x.text:
+                if '设计' in x.text:
+                   if '总承包' in x.text or '施工' in x.text:
+                    links.append(x.absolute_links)
+                else: links.append(x.absolute_links)
+    with open('sites_D.txt', 'w') as f:
+        for url in links:
+            url = url.pop()+'\n'
+            f.writelines(url)
 
 def getContent_A():
     with open('sites.txt', 'r') as f:
@@ -209,6 +228,7 @@ def getContent_B():
     ses = HTMLSession()
 
     sn = 0
+    # links = links[203:215]
     for url in links:
         time.sleep(random.random()*3)
         newPro = Project(sn)
@@ -294,32 +314,32 @@ def getContent_B():
             if result is not None: 
                 newPro.prices[i] = result.text
 
-        toFind = '#content-box-id > table' + si + '> tbody > tr:nth-child(3) > td:nth-child('+str(stCol+1)+')'
-        result = r.html.find(toFind, first = True)
-        if result is not None:
-            unit = result.text
-            if '万' in unit:
-                factor = 1
-            else: factor = 1/10000
+        toFind = '#content-box-id > table' + si + '> tbody > tr:nth-child(3) > td:nth-child('+str(stCol-1)+')'
+        results = r.html.find(toFind)
+        if len(results) != 0:
+            factor = 1
+            for re in results:
+                if '万' in re.text:
+                    factor = 10000
             for n, price in enumerate(newPro.prices):
                 for badwd in ['万','元','(',')','（','）',' ']:
                     price = price.replace(badwd, '')
                 price = price.replace('．', '.')
                 if price.isdigit() and int(price) > 100:
-                    price = int(price) * factor 
+                    price = int(price) * factor / 10000
                 elif price.count('.') == 1:
                     isFloat = True
                     for parts in price.split('.'):
                         if not parts.isdigit():
                             isFloat = False
                     if isFloat and float(price) > 100:
-                            price = float(price) * factor
+                            price = float(price) * factor / 10000
                 newPro.prices[n] = price
         projects.append(newPro)
         sn += 1
         if len(links) < 300:
             pause = len(links)
-        else: pause = 500
+        else: pause = 300
         if sn % (pause/10) == 0 or sn == len(links):
             print('processed to: %d ' %sn)
         if sn % pause == 0 or sn == len(links):
@@ -367,6 +387,7 @@ def getContent_C():
         if len(result) == 0:
             toFind = '标 人：' 
             result = r.html.find('p', containing = toFind)
+       
             if len(result) == 0:
                 toFind = '标\xa0人：' 
                 result = r.html.find('p', containing = toFind)
@@ -456,6 +477,87 @@ def getContent_C():
 
     return projects
 
+
+def getContent_D():
+    with open('sites_D.txt', 'r') as f:
+        links = f.readlines()
+        for i in range(len(links)):
+            links[i] = links[i].rstrip('\n')
+    
+    projects = []
+    ses = HTMLSession()
+
+    sn = 0
+    # links = links[203:215]
+    for url in links:
+        time.sleep(random.random()*3)
+        newPro = Project(sn)
+        r = ses.get(url)
+        if r.status_code == 404 or r.status_code == 403:
+            continue
+
+        toFind = 'body > div.main > div.sub-detail > div > h2'
+        result = r.html.find(toFind, first = True)
+        if result is not None:
+            newPro.name = result.text
+        if '中标候选人公示' in newPro.name:
+            newPro.name = newPro.name.replace('中标候选人公示', '')
+        toFind = 'body > div.main > div.sub-detail > div > h6 > label:nth-child(3)'
+        result = r.html.find(toFind, first = True)
+        if result is not None:
+            newPro.time = result.text.replace('时间：','')
+        toFind = '#div_content > p > font'
+        result = r.html.find(toFind, containing = '工程名称', first = True)
+        if result is not None:
+            newPro.name = result.text.replace('工程名称', '')
+        result = r.html.find(toFind, containing = '建设单位', first = True)
+        if result is not None:
+            newPro.owner = result.text.replace('建设单位', '')
+        else:
+            result = r.html.find(toFind, containing = '招   标   人', first = True)
+            if result is not None:
+                newPro.owner = result.text.replace('招   标   人', '')
+            else:
+                result = r.html.find(toFind, containing = '招 标 人', first = True)
+                if result is not None:
+                    newPro.owner = result.text.replace('招 标 人', '')
+
+        result = r.html.find(toFind, containing = '第一', first = True)
+        if result is not None:
+            newPro.candidates[0] = result.text
+        result = r.html.find(toFind, containing = '第二', first = True)
+        if result is not None:
+            newPro.candidates[1] = result.text
+        result = r.html.find(toFind, containing = '第三', first = True)
+        if result is not None:
+            newPro.candidates[2] = result.text
+        
+        elements = [newPro.name, newPro.time, newPro.owner, \
+                    newPro.candidates[0],newPro.candidates[1],newPro.candidates[2]]
+        for i, ele in enumerate(elements):
+            n1 = ele.find('：')
+            if n1 == -1: n1 = ele.find(':')
+            if n1 != -1:
+                ele = ele[n1 + 1:]
+            elements[i] = ele       
+
+        newPro.name, newPro.time, newPro.owner, newPro.candidates[0],newPro.candidates[1],newPro.candidates[2] = \
+            elements
+        projects.append(newPro)
+
+        sn += 1
+        if len(links) < 10:
+            pause = len(links)
+        else: pause = 10
+        if sn % (pause/10) == 0 or sn == len(links):
+            print('processed to: %d ' %sn)
+        if sn % pause == 0 or sn == len(links):
+            print('export: %s-%s' %(sn-pause, sn-1))
+            export(projects[sn-pause : sn], '%s-%s' %(sn-pause, sn-1))
+            s =  input('continue?') 
+            if s == 'n' or s == 'no':
+                break
+
 def export(projects, fname):
     evalMethod, name, price1, price2, price3, candidate1, candidate2, candidate3, owner, supervisor, biddingServer, time \
         = ([] for x in range(12))
@@ -475,13 +577,14 @@ def export(projects, fname):
     data = {'时间':time, '项目名称':name, '招标人':owner, '第一':candidate1, '第二':candidate2, '第三':candidate3, \
             '投标报价1\n（万元）':price1, '报价2':price2, '报价3':price3, '监督部门':supervisor,'评标办法':evalMethod}
     df = pd.DataFrame(data)
-    # df.to_csv(fname + '.csv')
-    df.to_excel(fname + '.xls')
+    df.to_csv(fname + '.csv')
+    # df.to_excel(fname + '.xls')
 
 # getLinks()
 # projects = getContent_A()
-projects = getContent_B()
+# projects = getContent_B()
 # projects = getContent_C()
+# projects = getContent_D()
 # export(projects)
 
 
