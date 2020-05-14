@@ -7,7 +7,7 @@ class Project(object):
     def __init__(self, sn = 1):
         self.sn = sn
         self.name = self.supervisor = self.biddingServer = self.owner = self.time = self.evalMethod = '/'
-        self.candidates, self.prices = [''] * 3, [''] * 3
+        self.candidates, self.prices = ['/'] * 3, ['/'] * 3
 
     def __str__(self):
         x = str(self.name) +'\n'+ str(self.price) +'\n'+ str(self.candidate) +'\n'+ str(self.supervisor) \
@@ -51,7 +51,7 @@ def getLinks():
                 links.append(x.absolute_links)
             else: links.append(x.absolute_links)
 
-    with open('sites_B.txt', 'a') as f:
+    with open('sites_B.txt', 'w') as f:
         forDup = set()
         for url in links:
             url = url.pop()+'\n'
@@ -216,15 +216,15 @@ def getContent_B():
         if r.status_code == 404 or r.status_code == 403:
             continue
 
-        toFind = '#content-box-id > p'
-        results = r.html.find(toFind)
-        if len(results) > 0:
-            for i in range(len(results)):
-                txt = results[i].text
-                if len(txt) > 10:
-                    n1, n2 = txt.find('采用'), txt.find('评标委员会') 
-                    newPro.evalMethod = txt[n1:n2]
-                    break
+        # toFind = '#content-box-id > p'
+        # results = r.html.find(toFind)
+        # if len(results) > 0:
+        #     for i in range(len(results)):
+        #         txt = results[i].text
+        #         if len(txt) > 10:
+        #             n1, n2 = txt.find('采用'), txt.find('评标委员会') 
+        #             newPro.evalMethod = txt[n1:n2]
+        #             break
         toFind = '#publicity_contents > div.title > h2'
         result = r.html.find(toFind, first = True)
         if result is not None:
@@ -305,28 +305,29 @@ def getContent_B():
                 for badwd in ['万','元','(',')','（','）',' ']:
                     price = price.replace(badwd, '')
                 price = price.replace('．', '.')
-                if price.isdigit():
+                if price.isdigit() and int(price) > 100:
                     price = int(price) * factor 
                 elif price.count('.') == 1:
                     isFloat = True
                     for parts in price.split('.'):
                         if not parts.isdigit():
                             isFloat = False
-                    if isFloat:
-                        newPro.prices[n] = float(price) * factor
-       
+                    if isFloat and float(price) > 100:
+                            price = float(price) * factor
+                newPro.prices[n] = price
         projects.append(newPro)
         sn += 1
         if len(links) < 300:
             pause = len(links)
-        else: pause = 300
+        else: pause = 500
         if sn % (pause/10) == 0 or sn == len(links):
             print('processed to: %d ' %sn)
         if sn % pause == 0 or sn == len(links):
             print('export: %s-%s' %(sn-pause, sn-1))
             export(projects[sn-pause : sn], '%s-%s' %(sn-pause, sn-1))
-            time.sleep(random.random()*20)
-            # if input('continue?') == 'n':
+            # time.sleep(random.random()*20)
+            # s =  input('continue?') 
+            # if s == 'n' or s == 'no':
             #     break
 
     return projects
@@ -474,7 +475,8 @@ def export(projects, fname):
     data = {'时间':time, '项目名称':name, '招标人':owner, '第一':candidate1, '第二':candidate2, '第三':candidate3, \
             '投标报价1\n（万元）':price1, '报价2':price2, '报价3':price3, '监督部门':supervisor,'评标办法':evalMethod}
     df = pd.DataFrame(data)
-    df.to_csv(fname + '.csv')
+    # df.to_csv(fname + '.csv')
+    df.to_excel(fname + '.xls')
 
 # getLinks()
 # projects = getContent_A()
