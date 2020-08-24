@@ -155,7 +155,7 @@ class DrawTreeByLink(object):
 		for curNode in drawList:
 			(x1, y1), (x2, y2) = curNode.drawRect
 			tmpTag = ('nodes', 'node'+str(curNode.nodeID))
-			self.cv.create_oval(x1, y1, x2, y2, fill = 'white', tag = tmpTag)
+			self.cv.create_oval(x1, y1, x2, y2, fill = curNode.color, tag = tmpTag)
 			txt = curNode.content
 			if isinstance(curNode.content, list):
 				txt = str()

@@ -5,6 +5,167 @@ from collections import deque
 
 from tktree import DrawTreeByLink, DrawTreeByList
 
+class TreeNode(object):
+	'''nodeID, content: -1 and None means to be updated later. kw: parent'''
+	def __init__(self, nodeID = -1, content = None, **kw):
+		self.nodeID = nodeID
+		self.content = content
+		self.children = {}
+		self._ndxInSib = None
+		self.lCou = None	# for traversal in layer, in cycle mode.
+		self.rCou = None	
+		self.next = None  # traversal the treenodes in the breath first mode.
+		self.prev = None
+		self.ndx = nodeID   #equal to id when initiate. ID is fixed and ndx if mutable.For calc position in the drawing.
+		self.X = self._level = None
+		self.drawXY = ()    # for drawing info.
+		self.drawWidth = None  # for drawing info.
+		self.color = 'white'
+		if 'parent' in kw:
+			self.parent = kw['parent']
+			self._level = self.parent._level + 1
+		else: 
+			self.parent = None
+			self._level = 1
+		self.descendants = []
+		self.needUpdateUbf = True
+		self.needUpdateLvl = True
+		self._height = None
+		self._ubf = None  # unbalanced factor: = height of left subtree - height of right subtree
+
+	def __str__(self):
+		if type(self.content) == int:
+			return ('nodeID, content, ndx: %d, %d, %d' % (self.nodeID, self.content, self.ndx))
+		if type(self.content) == str:
+			return ('nodeID, content, ndx: %d, %s, %d' % (self.nodeID, self.content, self.ndx))
+
+	@property
+	def ndxInSib(self):
+		_siblings = self.parent.children
+		if isinstance(_siblings, dict):
+			for k in _siblings.keys():
+				if _siblings[k] == self:
+					self._ndxInSib = k
+					break
+		elif isinstance(_siblings, list):
+			self._ndxInSib = _siblings.index(self)
+		return self._ndxInSib
+
+	@ndxInSib.setter
+	def ndxInSib(self, value):
+		self._ndxInSib = value
+
+	@property
+	def siblings(self):
+		if self.parent is not None:
+			return self.parent.children
+	
+	@property
+	def level(self):
+		if self.parent is None:
+			self._level = 1
+		elif self._level is None or self.needUpdateLvl == True:
+			self._level = self.parent.level + 1 
+			self.needUpdateLvl = False
+		return self._level
+
+	@level.setter
+	def level(self, value):
+		self._level = value
+		self.needUpdateLvl = False
+
+	@property
+	def height(self):
+		if self.children == {}:
+			self._height = 1
+		else:
+			h = []
+			for ch in self.children.values():
+				h.append(ch.height)
+			self._height = max(h) + 1
+		return self._height
+
+	@property
+	def ubf(self):
+		if self._ubf is None or self.needUpdateUbf == True:
+			lh = self.children[0].height if 0 in self.children else 0
+			rh = self.children[1].height if 1 in self.children else 0
+			self._ubf = lh - rh
+			self.needUpdateUbf = False
+		return self._ubf
+			
+class TreeNodeInList(object):
+	def __init__(self, inTree, nodeID = -1, content = None, **kw):
+		# super().__init__(nodeID = -1, content = None, **kw)
+		self.inTree = inTree
+		self.nodeID = nodeID
+		self.content = content
+		self.drawWidth = None  # for drawing info.
+		self.descendants = []
+
+	@property
+	def ndx(self):
+		return self.inTree.index(self)
+	
+	@property
+	def level(self):
+		return int(log2(self.ndx+1))+1
+
+	@property
+	def children(self):
+		l, r = (self.ndx + 1) * 2 - 1, (self.ndx + 1) * 2
+		if r < len(self.inTree): return {0:self.inTree[l], 1:self.inTree[r]}
+		elif l < len(self.inTree): return {0:self.inTree[l]} 
+		else: return {}
+
+	@property
+	def parent(self):
+		n = (self.ndx+1)//2-1
+		if n < 0: return None
+		else:
+			return self.inTree[n]
+
+	@property
+	def ndxInSib(self):
+		if self.ndx + 1 == (self.parent.ndx + 1) * 2:
+			return 0
+		elif self.ndx == (self.parent.ndx + 1) * 2:
+			return 1
+
+	@property
+	def siblings(self):
+		if self.ndx + 1 == self.parent.ndx * 2 and self.ndx + 1 < len(self.inTree):
+			return self.inTree(self.ndx + 1)
+		elif self.ndx == self.parent.ndx * 2 and self.ndx - 1 >= 0:
+			return self.inTree(self.ndx - 1)
+		else: return None
+
+class TreeNodeBM(TreeNode):
+	BM = 3
+	def __init__(self, nodeID = -1, content = None, **kw):
+		super().__init__(nodeID, content, **kw)
+		if not isinstance(self.content, list):
+			self.content =[self.content]
+		self.children = []
+		if 'BM' in kw:
+			self.BM = kw['BM']
+
+	@property
+	def size(self):
+		return len(self.content)
+		
+	def insertValue(self, value, **kw):
+		''' kw: insertAt: the index in content list where value shall be inserted.'''
+		if 'insertAt' in kw:
+			ndx = kw['insertAt']
+		else:
+			ndx = 0 
+			ct = self.content[ndx]
+			while ct is not None and value > ct:
+				ndx += 1
+		self.content.insert(ndx, value)
+		return ndx
+
 class NormalTree(object):
 	MAXNODE = 10
 	def __init__(self):
@@ -805,165 +966,7 @@ class HeapTree(CompleteBinTreeByList):
 			self.pop()
 		return tmp
 			
-class TreeNode(object):
-	'''nodeID, content: -1 and None means to be updated later. kw: parent'''
-	def __init__(self, nodeID = -1, content = None, **kw):
-		self.nodeID = nodeID
-		self.content = content
-		self.children = {}
-		self._ndxInSib = None
-		self.lCou = None	# for traversal in layer, in cycle mode.
-		self.rCou = None	
-		self.next = None  # traversal the treenodes in the breath first mode.
-		self.prev = None
-		self.ndx = nodeID   #equal to id when initiate. ID is fixed and ndx if mutable.For calc position in the drawing.
-		self.X = self._level = None
-		self.drawXY = ()    # for drawing info.
-		self.drawWidth = None  # for drawing info.
-		if 'parent' in kw:
-			self.parent = kw['parent']
-			self._level = self.parent._level + 1
-		else: 
-			self.parent = None
-			self._level = 1
-		self.descendants = []
-		self.needUpdateUbf = True
-		self.needUpdateLvl = True
-		self._height = None
-		self._ubf = None  # unbalanced factor: = height of left subtree - height of right subtree
 
-	def __str__(self):
-		if type(self.content) == int:
-			return ('nodeID, content, ndx: %d, %d, %d' % (self.nodeID, self.content, self.ndx))
-		if type(self.content) == str:
-			return ('nodeID, content, ndx: %d, %s, %d' % (self.nodeID, self.content, self.ndx))
-
-	@property
-	def ndxInSib(self):
-		_siblings = self.parent.children
-		if isinstance(_siblings, dict):
-			for k in _siblings.keys():
-				if _siblings[k] == self:
-					self._ndxInSib = k
-					break
-		elif isinstance(_siblings, list):
-			self._ndxInSib = _siblings.index(self)
-		return self._ndxInSib
-
-	@ndxInSib.setter
-	def ndxInSib(self, value):
-		self._ndxInSib = value
-
-	@property
-	def siblings(self):
-		if self.parent is not None:
-			return self.parent.children
-	
-	@property
-	def level(self):
-		if self.parent is None:
-			self._level = 1
-		elif self._level is None or self.needUpdateLvl == True:
-			self._level = self.parent.level + 1 
-			self.needUpdateLvl = False
-		return self._level
-
-	@level.setter
-	def level(self, value):
-		self._level = value
-		self.needUpdateLvl = False
-
-	@property
-	def height(self):
-		if self.children == {}:
-			self._height = 1
-		else:
-			h = []
-			for ch in self.children.values():
-				h.append(ch.height)
-			self._height = max(h) + 1
-		return self._height
-
-	@property
-	def ubf(self):
-		if self._ubf is None or self.needUpdateUbf == True:
-			lh = self.children[0].height if 0 in self.children else 0
-			rh = self.children[1].height if 1 in self.children else 0
-			self._ubf = lh - rh
-			self.needUpdateUbf = False
-		return self._ubf
-			
-class TreeNodeInList(object):
-	def __init__(self, inTree, nodeID = -1, content = None, **kw):
-		# super().__init__(nodeID = -1, content = None, **kw)
-		self.inTree = inTree
-		self.nodeID = nodeID
-		self.content = content
-		self.drawWidth = None  # for drawing info.
-		self.descendants = []
-
-	@property
-	def ndx(self):
-		return self.inTree.index(self)
-	
-	@property
-	def level(self):
-		return int(log2(self.ndx+1))+1
-
-	@property
-	def children(self):
-		l, r = (self.ndx + 1) * 2 - 1, (self.ndx + 1) * 2
-		if r < len(self.inTree): return {0:self.inTree[l], 1:self.inTree[r]}
-		elif l < len(self.inTree): return {0:self.inTree[l]} 
-		else: return {}
-
-	@property
-	def parent(self):
-		n = (self.ndx+1)//2-1
-		if n < 0: return None
-		else:
-			return self.inTree[n]
-
-	@property
-	def ndxInSib(self):
-		if self.ndx + 1 == (self.parent.ndx + 1) * 2:
-			return 0
-		elif self.ndx == (self.parent.ndx + 1) * 2:
-			return 1
-
-	@property
-	def siblings(self):
-		if self.ndx + 1 == self.parent.ndx * 2 and self.ndx + 1 < len(self.inTree):
-			return self.inTree(self.ndx + 1)
-		elif self.ndx == self.parent.ndx * 2 and self.ndx - 1 >= 0:
-			return self.inTree(self.ndx - 1)
-		else: return None
-
-class TreeNodeBM(TreeNode):
-	BM = 3
-	def __init__(self, nodeID = -1, content = None, **kw):
-		super().__init__(nodeID, content, **kw)
-		if not isinstance(self.content, list):
-			self.content =[self.content]
-		self.children = []
-		if 'BM' in kw:
-			self.BM = kw['BM']
-
-	@property
-	def size(self):
-		return len(self.content)
-		
-	def insertValue(self, value, **kw):
-		''' kw: insertAt: the index in content list where value shall be inserted.'''
-		if 'insertAt' in kw:
-			ndx = kw['insertAt']
-		else:
-			ndx = 0 
-			ct = self.content[ndx]
-			while ct is not None and value > ct:
-				ndx += 1
-		self.content.insert(ndx, value)
-		return ndx
 
 class BMTree(NormalTree):
 	BM = 3
@@ -1038,6 +1041,12 @@ class BMTree(NormalTree):
 		self._updateBFTLink(updateAll = True)
 		self._updateIDDict(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
+
+class RBTree(BinSearchTree):
+	def __init__(self):
+		super().__init__()
+	
+
 
 def test():
 	def testBinTree():
@@ -1134,6 +1143,9 @@ def test():
 			newTree.deleteValue(x)
 			draw2.updateDrawing('redraw')
 
+	def testRBTree():
+		rbTree = RBTree()
+
 	def testBMTree():
 		btree = BMTree()
 		for x in range(13):
@@ -1152,6 +1164,7 @@ def test():
 	# testHeapTree()
 	# testBSTree()
 	# testAVLTree()
-	testBMTree()
+	# testBMTree()
+	testRBTree()
 
 test()
