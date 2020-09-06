@@ -20,7 +20,10 @@ class TreeNode(object):
 		self.X = self._level = None
 		self.drawXY = ()    # for drawing info.
 		self.drawWidth = None  # for drawing info.
-		self.color = 'white'
+		if 'color' in kw:
+			self.color = kw['color']
+		else:
+			self.color = 'white'
 		if 'parent' in kw:
 			self.parent = kw['parent']
 			self._level = self.parent._level + 1
@@ -41,6 +44,8 @@ class TreeNode(object):
 
 	@property
 	def ndxInSib(self):
+		if self.parent is None:
+			return 0
 		_siblings = self.parent.children
 		if isinstance(_siblings, dict):
 			for k in _siblings.keys():
@@ -154,7 +159,7 @@ class TreeNodeBM(TreeNode):
 	def size(self):
 		return len(self.content)
 		
-	def insertValue(self, value, **kw):
+	def insertValueAt(self, value, **kw):
 		''' kw: insertAt: the index in content list where value shall be inserted.'''
 		if 'insertAt' in kw:
 			ndx = kw['insertAt']
@@ -1007,7 +1012,7 @@ class BMTree(NormalTree):
 			self._root = left.parent = right.parent = new
 		else:
 			pa, ndx = node.parent, node.ndxInSib
-			pa.insertValue(node.content[mid], insertAt = ndx)
+			pa.insertValueAt(node.content[mid], insertAt = ndx)
 			pa.children.pop(ndx)
 			pa.children.insert(ndx, right)
 			pa.children.insert(ndx, left)
@@ -1033,7 +1038,7 @@ class BMTree(NormalTree):
 
 	def insertValue(self, value):
 		node, n = self._findPosition(value)
-		node.insertValue(value, insertAt = n)
+		node.insertValueAt(value, insertAt = n)
 		if len(node.content) == self.BM:
 			self._split(node)
 		self._updateBFTLink(updateAll = True)
@@ -1056,9 +1061,57 @@ class RBTree(AVLTree):
 			while curNode is not None:
 				curNode.color = 'red'
 				curNode = curNode.next
-	
-	def insert(self, content):
-		pass
+
+	def _rotate3inLine(self, nx, ny, nz):
+		'''nx, ny, nz: the nodes to be rotated, from top to bottom. '''
+		n1, n2, n3 = nx.ndxInSib, ny.ndxInSib, nz.ndxInSib
+		pa = nx.parent
+		if n2 == n3:
+			nx.parent = ny
+			ny.children[1-n2] = nx
+			del nx.children[n2]
+			ny.parent = pa
+			if pa is not None:
+				pa.children[n1] = ny
+			else: self._root = ny
+			return ny
+		else:
+			nx.parent = ny.parent = nz
+			nz.children[n2], nz.children[1-n2] = ny, nx
+			del nx.children[n2], ny.children[n3]
+			nz.parent = pa
+			if pa is not None:
+				pa.children[n1] = nz
+			else: self._root = nz
+			return nz
+			
+	def insert(self, value):
+		if self._root is None:
+			self._root = TreeNode(-1, value, color = 'gray')
+			return
+		node, n = self._findParentAndIndex(value)
+		newNode = TreeNode(-1, value, parent = node, color = 'red')
+		node.children[n] = newNode
+		_siblings, n = node.siblings, node.ndxInSib
+		while node != self._root and node.color == 'red':
+			if len(_siblings) == 1:
+				tmpRoot = self._rotate3inLine(node.parent, node, newNode)
+				tmpRoot.color = 'grey'
+				for ch in tmpRoot.children.values():
+					ch.color = 'red'
+				node = tmpRoot
+			elif _siblings[1-n].color == 'red':
+				node.color = _siblings[1-n].color = 'gray'
+				node.parent.color = 'red'
+				node = node.parent
+			else:
+
+		self._root.color = 'grey'
+
+				
+		self._updateBFTLink(updateAll = True)
+		self._updateIDDict(updateAll = True)
+		self._updateTreeInfo(updateAll = True)
 
 def test():
 	def testBinTree():
@@ -1157,10 +1210,10 @@ def test():
 		
 	def testRBTree():
 		rbTree = RBTree()
-		seq = [randint(0,15) for x in range(13)]
-		rbTree.buildFromSeq(seq)
-		rbTree.reshapeAVL()
-		rbTree._initColoring()
+		# seq = [randint(0,15) for x in range(13)]
+		seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
+		for x in seq:
+			rbTree.insert(x)
 		draw1 = DrawTreeByLink(rbTree)
 		# draw1.updateDrawing('redraw')
 
