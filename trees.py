@@ -567,13 +567,11 @@ class AVLTree(BinSearchTree):
 	
 	def reshapeAVL(self):
 		seq = self.genSortedSeq()
-		newTree = AVLTree()
-		newTree._root = self._recReshapeAVL(0, len(seq) - 1, seq)
-		newTree._updateBFTLink(updateAll = True)
-		newTree._updateAndRefreshIDs()
-		newTree._updateIDDict(updateAll = True)
-		newTree._updateTreeInfo(updateAll = True)
-		return newTree
+		self._root = self._recReshapeAVL(0, len(seq) - 1, seq)
+		self._updateBFTLink(updateAll = True)
+		self._updateAndRefreshIDs()
+		self._updateIDDict(updateAll = True)
+		self._updateTreeInfo(updateAll = True)
 
 	def _recReshapeAVL(self, lNdx, rNdx, seq):
 		mNdx = (lNdx + rNdx) // 2
@@ -1042,11 +1040,25 @@ class BMTree(NormalTree):
 		self._updateIDDict(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
 
-class RBTree(BinSearchTree):
+class RBTree(AVLTree):
 	def __init__(self):
 		super().__init__()
-	
 
+	def _initColoring(self):
+		if self.height == 1:
+			self._root.color = 'gray'
+			return
+		else:
+			curNode = self._root
+			while curNode.level < self.height:
+				curNode.color = 'gray' 
+				curNode = curNode.next
+			while curNode is not None:
+				curNode.color = 'red'
+				curNode = curNode.next
+	
+	def insert(self, content):
+		pass
 
 def test():
 	def testBinTree():
@@ -1130,21 +1142,27 @@ def test():
 		# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
 		seq = [x*2 for x in range(10)]
 		avlTree.buildFromSeq(seq)
-		newTree = avlTree.reshapeAVL()
-		draw2 = DrawTreeByLink(newTree)
+		avlTree.reshapeAVL()
+		draw2 = DrawTreeByLink(avlTree)
 		for x in range(21, 29):
-			newTree.insertNodeAVL(x)
+			avlTree.insertNodeAVL(x)
 		for x in range(-10, 0):
-			newTree.insertNodeAVL(x)
+			avlTree.insertNodeAVL(x)
 		draw2.updateDrawing('redraw')
-		# newTree.deleteValue(-3)
+		# avlTree.deleteValue(-3)
 		# draw2.updateDrawing('redraw')
 		for x in range(-3, 3):
-			newTree.deleteValue(x)
+			avlTree.deleteValue(x)
 			draw2.updateDrawing('redraw')
-
+		
 	def testRBTree():
 		rbTree = RBTree()
+		seq = [randint(0,15) for x in range(13)]
+		rbTree.buildFromSeq(seq)
+		rbTree.reshapeAVL()
+		rbTree._initColoring()
+		draw1 = DrawTreeByLink(rbTree)
+		# draw1.updateDrawing('redraw')
 
 	def testBMTree():
 		btree = BMTree()

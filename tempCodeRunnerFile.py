@@ -1,0 +1,2 @@
+
+				curNode.color = 'black' 

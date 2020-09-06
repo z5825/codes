@@ -47,7 +47,7 @@ class DrawTreeByLink(object):
 		cx = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
 		cy = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
 		# cx, cy = 1440, 900
-		self.baseSize = 40 * 1080/cx
+		self.baseSize = 40 * 1440/cx
 		self.zoomX, self.zoomY = 1.5 + self.tree.width//10 * 1440/cx, 1.5 + self.tree.height//8 * 720/cy
 		self.root.geometry('%dx%d+%d+%d' %(cx*self.zoomX*0.2, cy*self.zoomY*0.3, 800, 300))
 
@@ -173,7 +173,7 @@ class DrawTreeByLink(object):
 			for ch in tmpList:
 				tmpTag = ('lines', str(curNode.nodeID) + '->', '->'+ str(ch.nodeID))
 				self.cv.create_line(curNode.centerXY[0], curNode.centerXY[1], ch.centerXY[0], ch.centerXY[1], \
-									width = 3, fill = 'red', tag = tmpTag)
+									width = 2, fill = 'black', tag = tmpTag)
 
 		#draw cousin lines:
 		for curNode in drawList:
