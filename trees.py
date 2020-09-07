@@ -1089,24 +1089,25 @@ class RBTree(AVLTree):
 		if self._root is None:
 			self._root = TreeNode(-1, value, color = 'gray')
 			return
-		node, n = self._findParentAndIndex(value)
-		newNode = TreeNode(-1, value, parent = node, color = 'red')
-		node.children[n] = newNode
-		_siblings, n = node.siblings, node.ndxInSib
-		while node != self._root and node.color == 'red':
+		pa, n = self._findParentAndIndex(value)
+		newNode = TreeNode(-1, value, parent = pa, color = 'red')
+		pa.children[n] = newNode
+		_siblings, n = pa.siblings, pa.ndxInSib
+		while pa is not None and pa.color == 'red':
 			if len(_siblings) == 1:
-				tmpRoot = self._rotate3inLine(node.parent, node, newNode)
-				tmpRoot.color = 'grey'
+				tmpRoot = self._rotate3inLine(pa.parent, pa, newNode)
+				tmpRoot.color = 'gray'
 				for ch in tmpRoot.children.values():
 					ch.color = 'red'
-				node = tmpRoot
+				pa = tmpRoot.parent
 			elif _siblings[1-n].color == 'red':
-				node.color = _siblings[1-n].color = 'gray'
-				node.parent.color = 'red'
-				node = node.parent
+				pa.color = _siblings[1-n].color = 'gray'
+				pa.parent.color = 'red'
+				pa = pa.parent.parent
 			else:
+				pass
 
-		self._root.color = 'grey'
+		self._root.color = 'gray'
 
 				
 		self._updateBFTLink(updateAll = True)
@@ -1211,7 +1212,8 @@ def test():
 	def testRBTree():
 		rbTree = RBTree()
 		# seq = [randint(0,15) for x in range(13)]
-		seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
+		# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
+		seq = [2, 15, 6, 19]
 		for x in seq:
 			rbTree.insert(x)
 		draw1 = DrawTreeByLink(rbTree)
