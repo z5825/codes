@@ -1062,14 +1062,17 @@ class RBTree(AVLTree):
 				curNode.color = 'red'
 				curNode = curNode.next
 
-	def _rotate3inLine(self, nx, ny, nz):
+	def _rotate3(self, nx, ny, nz):
 		'''nx, ny, nz: the nodes to be rotated, from top to bottom. '''
 		n1, n2, n3 = nx.ndxInSib, ny.ndxInSib, nz.ndxInSib
 		pa = nx.parent
 		if n2 == n3:
 			nx.parent = ny
+			if (1-n2) in ny.children:
+				nx.children[n2] = ny.children[1-n2]
+				nx.children[n2].parent = nx
+			else: del nx.children[n2]
 			ny.children[1-n2] = nx
-			del nx.children[n2]
 			ny.parent = pa
 			if pa is not None:
 				pa.children[n1] = ny
@@ -1077,8 +1080,15 @@ class RBTree(AVLTree):
 			return ny
 		else:
 			nx.parent = ny.parent = nz
+			if n3 in nz.children:
+				nx.children[n2] = nz.children[n3]
+				nx.children[n2].parent = nx
+			else: del nx.children[n2]
+			if 1-n3 in nz.children:
+				ny.children[n3] = nz.children[1-n3]
+				ny.children[n3].parent = ny
+			else: del ny.children[n3]
 			nz.children[n2], nz.children[1-n2] = ny, nx
-			del nx.children[n2], ny.children[n3]
 			nz.parent = pa
 			if pa is not None:
 				pa.children[n1] = nz
@@ -1090,22 +1100,29 @@ class RBTree(AVLTree):
 			self._root = TreeNode(-1, value, color = 'gray')
 			return
 		pa, n = self._findParentAndIndex(value)
-		newNode = TreeNode(-1, value, parent = pa, color = 'red')
-		pa.children[n] = newNode
-		_siblings, n = pa.siblings, pa.ndxInSib
+		son = TreeNode(-1, value, parent = pa, color = 'red')
+		pa.children[n] = son
 		while pa is not None and pa.color == 'red':
-			if len(_siblings) == 1:
-				tmpRoot = self._rotate3inLine(pa.parent, pa, newNode)
+			_siblings, n = pa.siblings, pa.ndxInSib
+			if len(_siblings) == 1: 
+				tmpRoot = self._rotate3(pa.parent, pa, son)
 				tmpRoot.color = 'gray'
 				for ch in tmpRoot.children.values():
 					ch.color = 'red'
 				pa = tmpRoot.parent
+				break
 			elif _siblings[1-n].color == 'red':
 				pa.color = _siblings[1-n].color = 'gray'
 				pa.parent.color = 'red'
-				pa = pa.parent.parent
+				son = pa.parent
+				pa = son.parent
 			else:
-				pass
+				tmpRoot = self._rotate3(pa.parent, pa, son)
+				tmpRoot.color = 'gray'
+				for ch in tmpRoot.children.values():
+					ch.color = 'red'
+				pa = tmpRoot.parent
+				son = tmpRoot
 
 		self._root.color = 'gray'
 
@@ -1211,12 +1228,13 @@ def test():
 		
 	def testRBTree():
 		rbTree = RBTree()
-		# seq = [randint(0,15) for x in range(13)]
-		# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
-		seq = [2, 15, 6, 19]
+		seq = [randint(0,100) for x in range(23)]
+		# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 14, 16, 12]
+		# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 14, 16, 12, 33, 45, 55, -1, -10, 7]
 		for x in seq:
 			rbTree.insert(x)
 		draw1 = DrawTreeByLink(rbTree)
+		# rbTree.insert(16)
 		# draw1.updateDrawing('redraw')
 
 	def testBMTree():

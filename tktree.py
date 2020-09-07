@@ -48,7 +48,7 @@ class DrawTreeByLink(object):
 		cy = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
 		# cx, cy = 1440, 900
 		self.baseSize = 40 * 1440/cx
-		self.zoomX, self.zoomY = 1.5 + self.tree.width//10 * 1440/cx, 1.5 + self.tree.height//8 * 720/cy
+		self.zoomX, self.zoomY = 2 + self.tree.width//10 * 1440/cx, 1.7 + self.tree.height//8 * 720/cy
 		self.root.geometry('%dx%d+%d+%d' %(cx*self.zoomX*0.2, cy*self.zoomY*0.3, 800, 300))
 
 		self._drawCanvas()
@@ -58,7 +58,7 @@ class DrawTreeByLink(object):
 	def _drawCanvas(self):
 		self.canvasWidth = self.baseSize * self.tree.width * self.zoomX 
 		self.canvasHeight = self.baseSize * (self.tree.height + 1)* self.zoomY
-		self.offset = self.baseSize // 2
+		self.offset = self.baseSize // 1.5
 		self.cv = tk.Canvas(self.fmCanvas, width = self.canvasWidth, height = self.canvasHeight, \
 							borderwidth = 3, relief = 'ridge')
 		self.cv.pack(side = 'left', fill = 'both', expand = True)
@@ -101,9 +101,9 @@ class DrawTreeByLink(object):
 			elif isinstance(curNode.children, list):
 				contentLength = max(1, len(curNode.content)) 
 			if curNode.level == 1:
-				curNode.centerXY = [0.5 * self.canvasWidth, self.offset]
+				curNode.centerXY = [0.8 * self.canvasWidth, self.offset]
 				curNode.drawWidth = self.canvasWidth
-				scale = 1.2
+				scale = 1.5
 				curNode.drawRect = [[curNode.centerXY[0] - self.baseSize * contentLength * 0.5 * scale, \
 									curNode.centerXY[1] - self.offset * 0.5 * scale],\
 									[curNode.centerXY[0] + self.baseSize * contentLength * 0.5 * scale, \
@@ -122,7 +122,7 @@ class DrawTreeByLink(object):
 				prevNode = curNode.prev
 				if curNode.drawRect[0][1] == prevNode.drawRect[0][1] and \
 					curNode.drawRect[0][0] < prevNode.drawRect[1][0]:
-					xMove = (prevNode.drawRect[1][0] - curNode.drawRect[0][0]) * 1.1
+					xMove = (prevNode.drawRect[1][0] - curNode.drawRect[0][0]) * 1.2
 					curNode.drawRect[0][0] += xMove
 					curNode.drawRect[1][0] += xMove
 					curNode.centerXY[0] += xMove

@@ -1,2 +1,2 @@
 
-				curNode.color = 'black' 
+		# draw1.updateDrawing('redraw')
