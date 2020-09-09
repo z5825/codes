@@ -110,7 +110,8 @@ class DrawTreeByLink(object):
 									curNode.centerXY[1] + self.offset * 0.5 * scale]]
 			else:
 				countOfCh = len(curNode.parent.children)
-				curNode.drawWidth = max(self.baseSize*contentLength, curNode.parent.drawWidth/min(2, countOfCh))
+				curNode.drawWidth = max(self.baseSize*contentLength*max(1,len(curNode.children)) * scale, \
+										curNode.parent.drawWidth/min(2, countOfCh))
 				curNode.centerXY = [curNode.parent.centerXY[0] - 1/2 * curNode.parent.drawWidth + \
 								(0.5 + curNode.ndxInSib) * curNode.drawWidth, \
 								(curNode.level-1)*self.baseSize*self.zoomY + self.offset]
@@ -118,39 +119,46 @@ class DrawTreeByLink(object):
 									curNode.centerXY[1] - self.offset * 0.5 * scale],\
 									[curNode.centerXY[0] + self.baseSize * contentLength * 0.5 * scale, \
 									curNode.centerXY[1] + self.offset * 0.5 * scale]]
-				# to adjust the position of overlayed nodes:
-				prevNode = curNode.prev
-				if curNode.drawRect[0][1] == prevNode.drawRect[0][1] and \
-					curNode.drawRect[0][0] < prevNode.drawRect[1][0]:
-					xMove = (prevNode.drawRect[1][0] - curNode.drawRect[0][0]) * 1.2
-					curNode.drawRect[0][0] += xMove
-					curNode.drawRect[1][0] += xMove
-					curNode.centerXY[0] += xMove
-
-		n = len(drawList) - 1
-		while n >= 0:
-			curNode = drawList[n]
-			if len(curNode.children) > 1:
-				x = 0
-				if isinstance(curNode.children, dict):
-					tmpList = curNode.children.values()
-				elif isinstance(curNode.children, list):
-					tmpList = curNode.children
-				for ch in tmpList:
-					x += ch.centerXY[0]
-				xMove = x/len(curNode.children) - curNode.centerXY[0]
-			elif 0 in curNode.children:
-				xMove = curNode.children[0].centerXY[0] + curNode.children[0].drawWidth/2 - curNode.centerXY[0]
-			elif 1 in curNode.children:
-				xMove = curNode.children[1].centerXY[0] - curNode.children[1].drawWidth/2 - curNode.centerXY[0]
-			elif len(curNode.children) == 1:  # for case of 23Tree, etc.
-				xMove = curNode.children[0].centerXY[0] + curNode.children[0].drawWidth/2 - curNode.centerXY[0]
-			else: 
-				xMove = 0
-			curNode.drawRect[0][0] += xMove
-			curNode.drawRect[1][0] += xMove
-			curNode.centerXY[0] += xMove
-			n -= 1
+		
+		# to adjust the position of overlayed nodes:
+		lMark = rMark = self.tree._last
+		while lMark is not None:
+			while lMark is not None and lMark.level == rMark.level:
+				lMark = lMark.prev
+			if	lMark is not None: 
+				curNode = lMark.next
+			else: curNode = self.tree._root
+			if len(curNode.children) > 0:
+				if len(curNode.children) > 1:
+					x = 0
+					if isinstance(curNode.children, dict):
+						tmpList = curNode.children.values()
+					elif isinstance(curNode.children, list):
+						tmpList = curNode.children
+					for ch in tmpList:
+						x += ch.centerXY[0]
+					xMove = x/len(curNode.children) - curNode.centerXY[0]
+				elif 0 in curNode.children:
+					xMove = curNode.children[0].centerXY[0] + curNode.drawWidth/2 - curNode.centerXY[0]
+				elif 1 in curNode.children:
+					xMove = curNode.children[1].centerXY[0] - curNode.drawWidth/2 - curNode.centerXY[0]
+				elif len(curNode.children) == 1:  # for case of 23Tree, etc.
+					xMove = curNode.children[0].centerXY[0] + curNode.children[0].drawWidth/2 - curNode.centerXY[0]
+				else: 
+					xMove = 0
+				curNode.drawRect[0][0] += xMove
+				curNode.drawRect[1][0] += xMove
+				curNode.centerXY[0] += xMove
+			nextNode = curNode.next
+			while nextNode != rMark.next:
+				if nextNode.drawRect[0][0] < curNode.centerXY[0] + curNode.drawWidth/2:
+					xMove = (curNode.centerXY[0] + curNode.drawWidth/2 - nextNode.drawRect[0][0]) 
+					nextNode.drawRect[0][0] += xMove
+					nextNode.drawRect[1][0] += xMove
+					nextNode.centerXY[0] += xMove
+				curNode = nextNode
+				nextNode = curNode.next
+			rMark = lMark
 
 		for curNode in drawList:
 			(x1, y1), (x2, y2) = curNode.drawRect
