@@ -48,7 +48,7 @@ class DrawTreeByLink(object):
 		# cy = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
 		cx, cy = 1440, 900
 		self.baseSize = 25 * 1440/cx
-		self.zoomX, self.zoomY = 2 + self.tree.width//10 * 1440/cx, 1.7 + self.tree.height//8 * 720/cy
+		self.zoomX, self.zoomY = 2.5 + self.tree.width//10 * 1440/cx, 1.7 + self.tree.height//8 * 720/cy
 		self.root.geometry('%dx%d+%d+%d' %(cx*self.zoomX*0.2, cy*self.zoomY*0.3, 800, 300))
 
 		self._drawCanvas()
@@ -71,6 +71,15 @@ class DrawTreeByLink(object):
 		self.verBar.config(command = self.cv.yview)
 		self.cv.config(yscrollcommand = self.verBar.set, xscrollcommand = self.horBar.set, 
 					scrollregion = (0, 0, self.canvasWidth, self.canvasHeight))
+
+	def _recMinDrawWidth(self, node, contentLength, scale):
+		if len(node.children) == 0:
+			return self.baseSize * contentLength * scale
+		else:
+			sumWidth = 0
+			for ch in node.children.values():
+				sumWidth += self._recMinDrawWidth(ch, contentLength, scale)
+			return sumWidth 
 
 	def _drawNodesAndLines(self, **kw):
 		drawList = []
@@ -110,7 +119,7 @@ class DrawTreeByLink(object):
 									curNode.centerXY[1] + self.offset * 0.5 * scale]]
 			else:
 				countOfCh = len(curNode.parent.children)
-				curNode.drawWidth = max(self.baseSize*contentLength*max(1,len(curNode.children)) * scale, \
+				curNode.drawWidth = max(self._recMinDrawWidth(curNode, contentLength, scale), \
 										curNode.parent.drawWidth/min(2, countOfCh))
 				curNode.centerXY = [curNode.parent.centerXY[0] - 1/2 * curNode.parent.drawWidth + \
 								(0.5 + curNode.ndxInSib) * curNode.drawWidth, \
@@ -125,10 +134,12 @@ class DrawTreeByLink(object):
 		while lMark is not None:
 			while lMark is not None and lMark.level == rMark.level:
 				lMark = lMark.prev
+			
+			# loop: to move a node to the centerX of its children
 			if	lMark is not None: 
 				curNode = lMark.next
 			else: curNode = self.tree._root
-			if len(curNode.children) > 0:
+			while curNode != rMark.next:
 				if len(curNode.children) > 1:
 					x = 0
 					if isinstance(curNode.children, dict):
@@ -149,15 +160,24 @@ class DrawTreeByLink(object):
 				curNode.drawRect[0][0] += xMove
 				curNode.drawRect[1][0] += xMove
 				curNode.centerXY[0] += xMove
-			nextNode = curNode.next
-			while nextNode != rMark.next:
-				if nextNode.drawRect[0][0] < curNode.centerXY[0] + curNode.drawWidth/2:
-					xMove = (curNode.centerXY[0] + curNode.drawWidth/2 - nextNode.drawRect[0][0]) 
-					nextNode.drawRect[0][0] += xMove
-					nextNode.drawRect[1][0] += xMove
-					nextNode.centerXY[0] += xMove
-				curNode = nextNode
+				curNode = curNode.next
+
+			# loop: to right move node and its sons if it enters the prev node's right bound
+			if	lMark is not None: 
+				curNode = lMark.next
+			else: curNode = self.tree._root
+			while curNode != rMark: 
 				nextNode = curNode.next
+				rBound, lBound = curNode.centerXY[0] + curNode.drawWidth/2, \
+								nextNode.centerXY[0] - nextNode.drawWidth/2
+				if lBound < rBound:
+					xMove = rBound - lBound 
+					self.tree._updateDesendants(nextNode)
+					for node in [nextNode] + nextNode.descendants:
+						node.drawRect[0][0] += xMove
+						node.drawRect[1][0] += xMove
+						node.centerXY[0] += xMove
+				curNode = nextNode
 			rMark = lMark
 
 		for curNode in drawList:
