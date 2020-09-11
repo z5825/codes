@@ -289,6 +289,7 @@ class NormalTree(object):
 		if 'updateAll' in kw and kw['updateAll'] == True:
 			qu = deque()
 			curNode = self._root
+			curNode.prev = None
 			curNode.ndx = curNode.level = 1
 			qu.append(self._root)
 			while len(qu) != 0:
@@ -1229,15 +1230,15 @@ def test():
 	def testRBTree():
 		rbTree = RBTree()
 		# seq = [randint(0,100) for x in range(23)]
-		# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 14, 16, 12]
-		seq = [2, 15, 6, 19, 18, 9, 8]
+		seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 14, 16, 12]
+		# seq = [2, 15, 6, 19, 18, 9, 8]
 		# seq = [56, 79, 35, 64, 46, 85, 53, 94, 27, 25, 4, 45, 91, 100, 98, 80, 97, 83, 9, 62, 48, 96, 24]
 		# seq = [41, 96, 13, 81, 18, 70, 31, 90, 94, 18, 29, 57, 70, 60, 66, 47, 16, 24, 59, 41, 18, 87, 96]
 		for x in seq:
 			rbTree.insert(x)
 		draw1 = DrawTreeByLink(rbTree)
-		rbTree.insert(10)
-		draw1.updateDrawing('redraw')
+		# rbTree.insert(10)
+		# draw1.updateDrawing('redraw')
 
 	def testBMTree():
 		btree = BMTree()
