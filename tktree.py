@@ -2,7 +2,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.messagebox as mbox
 
-# import win32api,win32con
+import win32api,win32con
 
 class BiTreeForTreeviewTTK(object):
 	def __init__(self, items):
@@ -44,12 +44,12 @@ class DrawTreeByLink(object):
 		self.bt1.pack(side = 'left')
 		self.bt2.pack(side = 'left')
 		
-		# cx = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
-		# cy = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
-		cx, cy = 1440, 900
+		cx = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
+		cy = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
+		# cx, cy = 1440, 900
 		self.baseSize = 25 * 1440/cx
-		self.zoomX, self.zoomY = 2.5 + self.tree.width//10 * 1440/cx, 1.7 + self.tree.height//8 * 720/cy
-		self.root.geometry('%dx%d+%d+%d' %(cx*self.zoomX*0.2, cy*self.zoomY*0.3, 800, 300))
+		self.zoomX, self.zoomY = 2.0 + self.tree.width//10 * 1440/cx, 1.7 + self.tree.height//8 * 720/cy
+		self.root.geometry('%dx%d+%d+%d' %(600, 400, cx*self.zoomX*0.2, cy*self.zoomY*0.2))
 
 		self._drawCanvas()
 		self._drawNodesAndLines(fromNode = self.tree._root, toNode = self.tree._last)
