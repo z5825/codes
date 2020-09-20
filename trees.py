@@ -505,7 +505,7 @@ class BinSearchTree(NormalTree):
 			elif 1 in node.children:
 				closest = self.minInBSTree(node.children[1])
 			else:
-				closest = None
+				closest = node
 			return closest
 		elif forRBTree == True:   # red node is more preferable
 			if 0 in node.children and 1 in node.children:
@@ -520,7 +520,7 @@ class BinSearchTree(NormalTree):
 			elif 1 in node.children:
 				closest = self.minInBSTree(node.children[1])
 			else:
-				closest = None
+				closest = node
 			return closest
 		else: return
 
@@ -1183,9 +1183,17 @@ class RBTree(BinSearchTree):
 
 		leafNode = swapNode
 		delNode.content = leafNode.content
+		pa = leafNode.parent
+		if pa is None:	return
 		n = leafNode.ndxInSib
 		if leafNode.color == 'red':
-			del leafNode.parent.children[n], leafNode
+			del pa.children[n], leafNode
+		else:
+			if pa.color == 'red':
+				direction = 'leftRotate' if n==0 else 'rightRotate'
+				del pa.children[n], leafNode
+				pa.children[1-n].children[1-n].color = 'gray'
+				self.rotate2(pa, pa.children[1-n],direction)
 
 		self._updateBFTLink(updateAll = True)
 		self._updateIDDict(updateAll = True)
@@ -1290,17 +1298,20 @@ def test():
 	def testRBTree():
 		rbTree = RBTree()
 		# seq = [randint(0,100) for x in range(23)]
-		# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 14, 16, 12]
-		seq = [2, 6, 19, 18, 9, 8]
+		seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 32, 0, 14, 16, 12]
+		# seq = [2, 6, 19, 16, 10, 22, 18,17]
 		# seq = [56, 79, 35, 64, 46, 85, 53, 94, 27, 25, 4, 45, 91, 100, 98, 80, 97, 83, 9, 62, 48, 96, 24]
 		# seq = [41, 96, 13, 81, 18, 70, 31, 90, 94, 18, 29, 57, 70, 60, 66, 47, 16, 24, 59, 41, 18, 87, 96]
 		for x in seq:
 			rbTree.insert(x)
 		draw1 = DrawTreeByLink(rbTree)
-		# rbTree.insert(50)
+		# rbTree.insert(17)
 		# draw1.updateDrawing('redraw')
-		rbTree.deleteValue(18)
+		rbTree.deleteValue(0)
+		rbTree.deleteValue(2)
 		draw1.updateDrawing('redraw')
+		# rbTree.deleteValue(0)
+		# draw1.updateDrawing('redraw')
 
 	def testBMTree():
 		btree = BMTree()

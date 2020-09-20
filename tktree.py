@@ -47,9 +47,9 @@ class DrawTreeByLink(object):
 		cx = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
 		cy = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
 		# cx, cy = 1440, 900
-		self.baseSize = 25 * 1440/cx
-		self.zoomX, self.zoomY = 2.0 + self.tree.width//10 * 1440/cx, 1.7 + self.tree.height//8 * 720/cy
-		self.root.geometry('%dx%d+%d+%d' %(600, 400, cx*self.zoomX*0.2, cy*self.zoomY*0.2))
+		self.baseSize = 25 * cx/1440
+		self.zoomX, self.zoomY = 2.0 + self.tree.width//10 * cx/1440, 1.7 + self.tree.height//8 * cy/720
+		self.root.geometry('%dx%d+%d+%d' %(cx*0.4, cy*0.5, cx*self.zoomX*0.2, cy*self.zoomY*0.2))
 
 		self._drawCanvas()
 		self._drawNodesAndLines(fromNode = self.tree._root, toNode = self.tree._last)
