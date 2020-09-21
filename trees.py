@@ -1184,16 +1184,26 @@ class RBTree(BinSearchTree):
 		leafNode = swapNode
 		delNode.content = leafNode.content
 		pa = leafNode.parent
-		if pa is None:	return
+		if pa is None:	
+			return
 		n = leafNode.ndxInSib
 		if leafNode.color == 'red':
 			del pa.children[n], leafNode
 		else:
+			del pa.children[n], leafNode
+			bro = pa.children[1-n]    # bro node defitely exists.
+			direction = 'leftRotate' if n==0 else 'rightRotate'
 			if pa.color == 'red':
-				direction = 'leftRotate' if n==0 else 'rightRotate'
-				del pa.children[n], leafNode
-				pa.children[1-n].children[1-n].color = 'gray'
-				self.rotate2(pa, pa.children[1-n],direction)
+				bro.children[1-n].color = 'gray'
+				self.rotate2(pa, bro, direction)
+			elif pa.color == 'gray':
+				if len(bro.children) == 1:
+					n3 = 0 if 0 in bro.children else 1
+					son = bro.children[n3]
+					son.color = 'gray'
+					self._rotate3(pa, bro, son)
+				elif len(bro.children) == 2:
+
 
 		self._updateBFTLink(updateAll = True)
 		self._updateIDDict(updateAll = True)
