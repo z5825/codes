@@ -1203,6 +1203,10 @@ class RBTree(BinSearchTree):
 					son.color = 'gray'
 					self._rotate3(pa, bro, son)
 				elif len(bro.children) == 2:
+					bro.children[1-n].color = 'gray'
+					self.rotate2(pa, bro, direction)
+				else:
+					pass
 
 
 		self._updateBFTLink(updateAll = True)
@@ -1316,12 +1320,12 @@ def test():
 			rbTree.insert(x)
 		draw1 = DrawTreeByLink(rbTree)
 		# rbTree.insert(17)
-		# draw1.updateDrawing('redraw')
-		rbTree.deleteValue(0)
-		rbTree.deleteValue(2)
+		rbTree.deleteValue(8)
 		draw1.updateDrawing('redraw')
-		# rbTree.deleteValue(0)
-		# draw1.updateDrawing('redraw')
+		rbTree.deleteValue(0)
+		draw1.updateDrawing('redraw')
+		rbTree.deleteValue(1)
+		draw1.updateDrawing('redraw')
 
 	def testBMTree():
 		btree = BMTree()
