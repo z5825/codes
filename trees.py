@@ -1183,10 +1183,9 @@ class RBTree(BinSearchTree):
 
 		leafNode = swapNode
 		delNode.content = leafNode.content
-		pa = leafNode.parent
-		if pa is None:	
+		if leafNode == self._root:
 			return
-		n = leafNode.ndxInSib
+		pa, n = leafNode.parent, leafNode.ndxInSib
 		if leafNode.color == 'red':
 			del pa.children[n], leafNode
 		else:
