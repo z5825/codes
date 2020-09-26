@@ -521,8 +521,14 @@ class BinSearchTree(NormalTree):
 				closest = self.minInBSTree(node.children[1])
 			else:
 				closest = node
+
+			if len(closest.children) == 0:
+				return closest
+			elif 0 in closest.children:
+				self.rotate2(closest, closest.children[0], 'rightRotate')
+			elif 1 in closest.children:
+				self.rotate2(closest, closest.children[1], 'leftRotate')
 			return closest
-		else: return
 
 	def insertNode(self, value):
 		pa, n = self._findParentAndIndex(value)
@@ -1175,13 +1181,7 @@ class RBTree(BinSearchTree):
 		delNode = self.search(value)
 		if delNode is None:
 			return
-		swapNode = self._findClosest(delNode, forRBTree = True)
-		if 0 in swapNode.children:
-			self.rotate2(swapNode, swapNode.children[0], 'rightRotate')
-		elif 1 in swapNode.children:
-			self.rotate2(swapNode, swapNode.children[1], 'leftRotate')
-
-		leafNode = swapNode
+		leafNode = self._findClosest(delNode, forRBTree = True)
 		delNode.content = leafNode.content
 		if leafNode == self._root:
 			return
