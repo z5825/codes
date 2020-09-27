@@ -493,42 +493,62 @@ class BinSearchTree(NormalTree):
 		self._updateIDDict(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
 
-	def _findClosest(self, node, forRBTree = False):
-		if forRBTree == False:
-			if 0 in node.children and 1 in node.children:
-				left, right = self.maxInBSTree(node.children[0]), self.minInBSTree(node.children[1])
-				if node.content - left.content <= right.content - node.content:
-					closest = left
-				else: closest = right
-			elif 0 in node.children:
-				closest = self.maxInBSTree(node.children[0])
-			elif 1 in node.children:
-				closest = self.minInBSTree(node.children[1])
+	def _findClosest(self, node, forRBTree = False, **kw):
+		''' kw: 'side' '''
+		if 'side' in kw:
+			n = kw['side']
+			if n in node.children:
+				if n == 0:
+					closest = left = self.maxInBSTree(node.children[0])
+				elif n == 1:
+					closest = right = self.minInBSTree(node.children[1])
+				if forRBTree == True:
+					if len(closest.children) == 0:
+							return closest
+						elif 0 in closest.children:
+							self._rotate2(closest, closest.children[0], 'rightRotate')
+						elif 1 in closest.children:
+							self._rotate2(closest, closest.children[1], 'leftRotate')
+						return closest
 			else:
-				closest = node
-			return closest
-		elif forRBTree == True:   # red node is more preferable
-			if 0 in node.children and 1 in node.children:
-				left, right = self.maxInBSTree(node.children[0]), self.minInBSTree(node.children[1])
-				if left.color == 'red':  closest = left
-				elif right.color == 'red':	closest = right
-				elif left.parent.color == 'red':	closest = left
-				elif right.parent.color == 'red':	closest = right
-				else: closest = left
-			elif 0 in node.children:
-				closest = self.maxInBSTree(node.children[0])
-			elif 1 in node.children:
-				closest = self.minInBSTree(node.children[1])
-			else:
-				closest = node
-
-			if len(closest.children) == 0:
+				return None
+		else:
+			if forRBTree == False:
+				if 0 in node.children and 1 in node.children:
+					left, right = self.maxInBSTree(node.children[0]), self.minInBSTree(node.children[1])
+					if node.content - left.content <= right.content - node.content:
+						closest = left
+					else: closest = right
+				elif 0 in node.children:
+					closest = self.maxInBSTree(node.children[0])
+				elif 1 in node.children:
+					closest = self.minInBSTree(node.children[1])
+				else:
+					closest = node
 				return closest
-			elif 0 in closest.children:
-				self.rotate2(closest, closest.children[0], 'rightRotate')
-			elif 1 in closest.children:
-				self.rotate2(closest, closest.children[1], 'leftRotate')
-			return closest
+			elif forRBTree == True:   # red node is more preferable
+				if 0 in node.children and 1 in node.children:
+					left, right = self.maxInBSTree(node.children[0]), self.minInBSTree(node.children[1])
+					if left.color == 'red':  closest = left
+					elif right.color == 'red':	closest = right
+					elif left.parent.color == 'red':	closest = left
+					elif right.parent.color == 'red':	closest = right
+					else: closest = left
+				elif 0 in node.children:
+					closest = self.maxInBSTree(node.children[0])
+				elif 1 in node.children:
+					closest = self.minInBSTree(node.children[1])
+				else:
+					closest = node
+
+	
+				if len(closest.children) == 0:
+					return closest
+				elif 0 in closest.children:
+					self._rotate2(closest, closest.children[0], 'rightRotate')
+				elif 1 in closest.children:
+					self._rotate2(closest, closest.children[1], 'leftRotate')
+				return closest
 
 	def insertNode(self, value):
 		pa, n = self._findParentAndIndex(value)
@@ -580,7 +600,7 @@ class BinSearchTree(NormalTree):
 		self._updateTreeInfo(updateAll = True)
 		return closest, n   # return the really deleted node and its position for further use.
 
-	def rotate2(self, node1, node2, direction):
+	def _rotate2(self, node1, node2, direction):
 		''' direction : 'leftRotate' or 'rightRotate'  '''
 		pa = node1.parent
 		if pa is not None:
@@ -601,7 +621,8 @@ class BinSearchTree(NormalTree):
 		node1.parent = node2
 		node2.children[n3] = node1
 
-		node1.color, node2.color = node2.color, node1.color
+		# node1.color, node2.color = node2.color, node1.color
+		return node2
 
 	def genSortedSeq(self):
 		seq = []
@@ -1141,6 +1162,35 @@ class RBTree(BinSearchTree):
 				pa.children[n1] = nz
 			else: self._root = nz
 			return nz
+
+	def _nodeToBeDel(self, leafNode):
+		if leafNode == self._root:
+			return leafNode
+		pa, n = leafNode.parent, leafNode.ndxInSib
+		if leafNode.color == 'red':
+			return leafNode
+		else: 
+			bro = pa.children[1-n]    # bro node defitely exists.
+			direction = 'leftRotate' if n==0 else 'rightRotate'
+			paOriColor = pa.color
+			if len(bro.children) == 2:
+				tmpRoot = self._rotate2(pa, bro, direction)
+				tmpRoot.color = paOriColor
+				tmpRoot.children[0].color = tmpRoot.children[1].color = 'gray'
+			elif len(bro.children) == 1:
+				n3 = 0 if 0 in bro.children else 1
+				son = bro.children[n3]
+				self._rotate3(pa, bro, son)
+				tmpRoot.color = paOriColor
+				tmpRoot.children[0].color = tmpRoot.children[1].color = 'gray'
+			elif len(bro.children) == 0:
+				if pa.color == 'red':
+					tmpRoot = self._rotate2(pa, bro, direction)
+					tmpRoot.color = 'gray'
+					tmpRoot.children[n].color = 'red'
+				else:   # worst case: three black nodes bind together
+					leafNode = None
+		return leafNode
 			
 	def insert(self, value):
 		if self._root is None:
@@ -1185,27 +1235,39 @@ class RBTree(BinSearchTree):
 		delNode.content = leafNode.content
 		if leafNode == self._root:
 			return
+
+		pa = leafNode.parent
+		tobeDel = self._nodeToBeDel(leafNode)
+		while tobeDel is None:
+			leafNode = pa
+			pa = pa.parent
+			n = leafNode.ndxInSib
+			leafNode = self._findClosest(pa, 'side' = 1-n)
+			tobeDel = self._nodeToBeDel(leafNode)
+			# if tobeDel is not None:
+
+
+
+		pa, n = tobeDel.parent, tobeDel.ndxInSib
+		del pa.children[n], tobeDel
+
+		while result is None:
+			leafNode = leafNode.parent
+			result = self._delLeafInRBTree(leafNode)
+
+
+
+		else:
+
 		pa, n = leafNode.parent, leafNode.ndxInSib
 		if leafNode.color == 'red':
 			del pa.children[n], leafNode
 		else:
-			del pa.children[n], leafNode
-			bro = pa.children[1-n]    # bro node defitely exists.
+			self._delLeafInRBTree(leafNode)
+
+			
 			direction = 'leftRotate' if n==0 else 'rightRotate'
-			if pa.color == 'red':
-				bro.children[1-n].color = 'gray'
-				self.rotate2(pa, bro, direction)
-			elif pa.color == 'gray':
-				if len(bro.children) == 1:
-					n3 = 0 if 0 in bro.children else 1
-					son = bro.children[n3]
-					son.color = 'gray'
-					self._rotate3(pa, bro, son)
-				elif len(bro.children) == 2:
-					bro.children[1-n].color = 'gray'
-					self.rotate2(pa, bro, direction)
-				else:
-					pass
+		
 
 
 		self._updateBFTLink(updateAll = True)
