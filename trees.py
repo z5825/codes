@@ -504,14 +504,12 @@ class BinSearchTree(NormalTree):
 					closest = right = self.minInBSTree(node.children[1])
 				if forRBTree == True:
 					if len(closest.children) == 0:
-							return closest
-						elif 0 in closest.children:
-							self._rotate2(closest, closest.children[0], 'rightRotate')
-						elif 1 in closest.children:
-							self._rotate2(closest, closest.children[1], 'leftRotate')
-						return closest
-			else:
-				return None
+						pass
+					elif 0 in closest.children:
+						self._rotate2(closest, closest.children[0], 'rightRotate')
+					elif 1 in closest.children:
+						self._rotate2(closest, closest.children[1], 'leftRotate')
+				return closest
 		else:
 			if forRBTree == False:
 				if 0 in node.children and 1 in node.children:
@@ -540,14 +538,18 @@ class BinSearchTree(NormalTree):
 					closest = self.minInBSTree(node.children[1])
 				else:
 					closest = node
-
 	
 				if len(closest.children) == 0:
-					return closest
+					pass
 				elif 0 in closest.children:
-					self._rotate2(closest, closest.children[0], 'rightRotate')
+					color1, color2 = closest.color, closest.children[0].color
+					tmpRoot = self._rotate2(closest, closest.children[0], 'rightRotate')
+					tmpRoot.color, tmpRoot.children[1].color = color1, color2
 				elif 1 in closest.children:
-					self._rotate2(closest, closest.children[1], 'leftRotate')
+					color1, color2 = closest.color, closest.children[1].color
+					tmpRoot = self._rotate2(closest, closest.children[1], 'leftRotate')
+					tmpRoot.color, tmpRoot.children[0].color = color1, color2
+				
 				return closest
 
 	def insertNode(self, value):
@@ -623,6 +625,39 @@ class BinSearchTree(NormalTree):
 
 		# node1.color, node2.color = node2.color, node1.color
 		return node2
+
+	def _rotate3(self, nx, ny, nz):
+		'''nx, ny, nz: the nodes to be rotated, from top to bottom. '''
+		n1, n2, n3 = nx.ndxInSib, ny.ndxInSib, nz.ndxInSib
+		pa = nx.parent
+		if n2 == n3:
+			nx.parent = ny
+			if (1-n2) in ny.children:
+				nx.children[n2] = ny.children[1-n2]
+				nx.children[n2].parent = nx
+			else: del nx.children[n2]
+			ny.children[1-n2] = nx
+			ny.parent = pa
+			if pa is not None:
+				pa.children[n1] = ny
+			else: self._root = ny
+			return ny
+		else:
+			nx.parent = ny.parent = nz
+			if n3 in nz.children:
+				nx.children[n2] = nz.children[n3]
+				nx.children[n2].parent = nx
+			else: del nx.children[n2]
+			if 1-n3 in nz.children:
+				ny.children[n3] = nz.children[1-n3]
+				ny.children[n3].parent = ny
+			else: del ny.children[n3]
+			nz.children[n2], nz.children[1-n2] = ny, nx
+			nz.parent = pa
+			if pa is not None:
+				pa.children[n1] = nz
+			else: self._root = nz
+			return nz
 
 	def genSortedSeq(self):
 		seq = []
@@ -1130,40 +1165,9 @@ class RBTree(BinSearchTree):
 				curNode.color = 'red'
 				curNode = curNode.next
 
-	def _rotate3(self, nx, ny, nz):
-		'''nx, ny, nz: the nodes to be rotated, from top to bottom. '''
-		n1, n2, n3 = nx.ndxInSib, ny.ndxInSib, nz.ndxInSib
-		pa = nx.parent
-		if n2 == n3:
-			nx.parent = ny
-			if (1-n2) in ny.children:
-				nx.children[n2] = ny.children[1-n2]
-				nx.children[n2].parent = nx
-			else: del nx.children[n2]
-			ny.children[1-n2] = nx
-			ny.parent = pa
-			if pa is not None:
-				pa.children[n1] = ny
-			else: self._root = ny
-			return ny
-		else:
-			nx.parent = ny.parent = nz
-			if n3 in nz.children:
-				nx.children[n2] = nz.children[n3]
-				nx.children[n2].parent = nx
-			else: del nx.children[n2]
-			if 1-n3 in nz.children:
-				ny.children[n3] = nz.children[1-n3]
-				ny.children[n3].parent = ny
-			else: del ny.children[n3]
-			nz.children[n2], nz.children[1-n2] = ny, nx
-			nz.parent = pa
-			if pa is not None:
-				pa.children[n1] = nz
-			else: self._root = nz
-			return nz
 
-	def _nodeToBeDel(self, leafNode):
+
+	def _delLeaf(self, leafNode):
 		if leafNode == self._root:
 			return leafNode
 		pa, n = leafNode.parent, leafNode.ndxInSib
@@ -1173,14 +1177,16 @@ class RBTree(BinSearchTree):
 			bro = pa.children[1-n]    # bro node defitely exists.
 			direction = 'leftRotate' if n==0 else 'rightRotate'
 			paOriColor = pa.color
+			broOriColor = bro.color
 			if len(bro.children) == 2:
 				tmpRoot = self._rotate2(pa, bro, direction)
 				tmpRoot.color = paOriColor
-				tmpRoot.children[0].color = tmpRoot.children[1].color = 'gray'
+				tmpRoot.children[n].color = broOriColor 
+				tmpRoot.children[1-n].color = 'gray'
 			elif len(bro.children) == 1:
 				n3 = 0 if 0 in bro.children else 1
 				son = bro.children[n3]
-				self._rotate3(pa, bro, son)
+				tmpRoot = self._rotate3(pa, bro, son)
 				tmpRoot.color = paOriColor
 				tmpRoot.children[0].color = tmpRoot.children[1].color = 'gray'
 			elif len(bro.children) == 0:
@@ -1232,41 +1238,14 @@ class RBTree(BinSearchTree):
 		if delNode is None:
 			return
 		leafNode = self._findClosest(delNode, forRBTree = True)
-		delNode.content = leafNode.content
-		if leafNode == self._root:
-			return
+		tobeDel = self._delLeaf(leafNode)
 
-		pa = leafNode.parent
-		tobeDel = self._nodeToBeDel(leafNode)
-		while tobeDel is None:
-			leafNode = pa
-			pa = pa.parent
-			n = leafNode.ndxInSib
-			leafNode = self._findClosest(pa, 'side' = 1-n)
-			tobeDel = self._nodeToBeDel(leafNode)
-			# if tobeDel is not None:
-
-
-
-		pa, n = tobeDel.parent, tobeDel.ndxInSib
-		del pa.children[n], tobeDel
-
-		while result is None:
-			leafNode = leafNode.parent
-			result = self._delLeafInRBTree(leafNode)
-
-
-
+		if tobeDel is not None:
+			delNode.content = tobeDel.content
+			pa, n = tobeDel.parent, tobeDel.ndxInSib
+			del pa.children[n], tobeDel
 		else:
-
-		pa, n = leafNode.parent, leafNode.ndxInSib
-		if leafNode.color == 'red':
-			del pa.children[n], leafNode
-		else:
-			self._delLeafInRBTree(leafNode)
-
-			
-			direction = 'leftRotate' if n==0 else 'rightRotate'
+			pass
 		
 
 
@@ -1373,19 +1352,27 @@ def test():
 	def testRBTree():
 		rbTree = RBTree()
 		# seq = [randint(0,100) for x in range(23)]
-		seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 32, 0, 14, 16, 12]
+		# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 32, 0, 14, 16, 12]
 		# seq = [2, 6, 19, 16, 10, 22, 18,17]
-		# seq = [56, 79, 35, 64, 46, 85, 53, 94, 27, 25, 4, 45, 91, 100, 98, 80, 97, 83, 9, 62, 48, 96, 24]
-		# seq = [41, 96, 13, 81, 18, 70, 31, 90, 94, 18, 29, 57, 70, 60, 66, 47, 16, 24, 59, 41, 18, 87, 96]
+		seq = [56, 79, 35, 64, 46, 85, 53, 94, 27, 25, 4, 45, 91, 100, 98, 80, 97, 83, 9, 62, 48, 96, 24]
+		seq2 = [163, 118, 147, 164, 119, 117, 121, 158, 126, 165, 196, 191, 163, 177, 109, 187, 135, 172, 164, 139]
+		seq += seq2
 		for x in seq:
 			rbTree.insert(x)
 		draw1 = DrawTreeByLink(rbTree)
 		# rbTree.insert(17)
-		rbTree.deleteValue(8)
+		rbTree.deleteValue(45)
+		rbTree.deleteValue(46)
+		rbTree.deleteValue(9)
+		rbTree.deleteValue(24)
+		rbTree.deleteValue(35)
+		rbTree.deleteValue(53)
+		rbTree.deleteValue(4)
+		# draw1.updateDrawing('redraw')
+		rbTree.deleteValue(119)
+		rbTree.deleteValue(121)
 		draw1.updateDrawing('redraw')
-		rbTree.deleteValue(0)
-		draw1.updateDrawing('redraw')
-		rbTree.deleteValue(1)
+		rbTree.deleteValue(126)
 		draw1.updateDrawing('redraw')
 
 	def testBMTree():
