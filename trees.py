@@ -1165,39 +1165,6 @@ class RBTree(BinSearchTree):
 				curNode.color = 'red'
 				curNode = curNode.next
 
-
-
-	def _delLeaf(self, leafNode):
-		if leafNode == self._root:
-			return leafNode
-		pa, n = leafNode.parent, leafNode.ndxInSib
-		if leafNode.color == 'red':
-			return leafNode
-		else: 
-			bro = pa.children[1-n]    # bro node defitely exists.
-			direction = 'leftRotate' if n==0 else 'rightRotate'
-			paOriColor = pa.color
-			broOriColor = bro.color
-			if len(bro.children) == 2:
-				tmpRoot = self._rotate2(pa, bro, direction)
-				tmpRoot.color = paOriColor
-				tmpRoot.children[n].color = broOriColor 
-				tmpRoot.children[1-n].color = 'gray'
-			elif len(bro.children) == 1:
-				n3 = 0 if 0 in bro.children else 1
-				son = bro.children[n3]
-				tmpRoot = self._rotate3(pa, bro, son)
-				tmpRoot.color = paOriColor
-				tmpRoot.children[0].color = tmpRoot.children[1].color = 'gray'
-			elif len(bro.children) == 0:
-				if pa.color == 'red':
-					tmpRoot = self._rotate2(pa, bro, direction)
-					tmpRoot.color = 'gray'
-					tmpRoot.children[n].color = 'red'
-				else:   # worst case: three black nodes bind together
-					leafNode = None
-		return leafNode
-			
 	def insert(self, value):
 		if self._root is None:
 			self._root = TreeNode(-1, value, color = 'gray')
@@ -1233,122 +1200,68 @@ class RBTree(BinSearchTree):
 		self._updateIDDict(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
 
-	def deleteValue(self, value):
-		delNode = self.search(value)
-		if delNode is None:
+	def deleteValue(self, value):  # this is very ugly because the leaf is None instead of a sentinel black node
+		nodeToDel = self.search(value)
+		if nodeToDel is None:
 			return
-		leafNode = self._findClosest(delNode, forRBTree = True)
-		tobeDel = self._delLeaf(leafNode)
+		leafNode = self._findClosest(nodeToDel, forRBTree = True)
+		nodeToDel.content = leafNode.content
 
-		if tobeDel is not None:
-			delNode.content = tobeDel.content
-			pa, n = tobeDel.parent, tobeDel.ndxInSib
-			del pa.children[n], tobeDel
+		pa, n = leafNode.parent, leafNode.ndxInSib
+		if leafNode.color == 'red':
+			del leafNode, pa.children[n]
 		else:
-			pass
-		
-
+			curNode, n = leafNode, leafNode.ndxInSib
+			bro = pa.children[1-n]
+			del leafNode, pa.children[n]
+			while curNode.color == 'gray' and curNode != self._root:
+				if bro.color == 'red':
+					direction = 'leftRotate' if n==0 else 'rightRotate'
+					pa.color, bro.color = 'red', 'gray'
+					self._rotate2(pa, bro, direction)
+					bro = pa.children[1-n]
+				else:
+					if len(bro.children) == 2:
+						if bro.children[0].color == 'gray' and bro.children[1].color == 'gray':
+							bro.color = 'red'
+							curNode = curNode.parent
+							pa, n = curNode.parent, curNode.ndxInSib
+							bro = pa.children[1-n]
+						elif bro.children[n].color == 'red':
+							direction = 'leftRotate' if n==1 else 'rightRotate'
+							bro.color, bro.children[n].color = 'red', 'gray'
+							bro = self._rotate2(bro, bro.children[n], direction)
+						elif bro.children[1-n].color == 'red':
+							paOriColor = pa.color
+							direction = 'leftRotate' if n==0 else 'rightRotate'
+							tmpRoot = self._rotate2(pa, bro, direction)
+							tmpRoot.color = paOriColor
+							tmpRoot.children[0].color = tmpRoot.children[1].color = 'gray'
+							curNode = self._root
+					elif len(bro.children) == 1:
+						if n in bro.children:
+							direction = 'leftRotate' if n==1 else 'rightRotate'
+							bro.color, bro.children[n].color = 'red', 'gray'
+							bro = self._rotate2(bro, bro.children[n], direction)
+						elif 1-n in bro.children:
+							paOriColor = pa.color
+							direction = 'leftRotate' if n==0 else 'rightRotate'
+							tmpRoot = self._rotate2(pa, bro, direction)
+							tmpRoot.color = paOriColor
+							tmpRoot.children[0].color = tmpRoot.children[1].color = 'gray'
+							curNode = self._root
+					elif len(bro.children) == 0:
+						bro.color = 'red'
+						curNode = curNode.parent
+						pa, n = curNode.parent, curNode.ndxInSib
+						bro = pa.children[1-n]
+			curNode.color = 'gray'
 
 		self._updateBFTLink(updateAll = True)
 		self._updateIDDict(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
 
-
 def test():
-	def testBinTree():
-		tree1 = CompleteBinTreeByLink()
-		# seq = list(chr(x+65) for x in range(0, 26))
-		seq = list(x for x in range(1, 16))
-		tree1.buildFromSeq(seq)
-		draw1 = DrawTreeByLink(tree1)
-		tree1.append(*(16,17))
-		draw1.updateDrawing('append')
-		tree1.deleteAndMove()
-		draw1.updateDrawing('delete')
-		tree1.deleteAndMove(ID = 3)
-		draw1.updateDrawing('delete', ID = 3)
-		tree1.deleteAndMove(fromID = 6, toID = 14)
-		draw1.updateDrawing('delete', fromID = 6, toID = 14)
-
-	def testNormalTree():
-		tree1 = CompleteBinTreeByLink()
-		seq1 = list(x for x in range(1, 16))
-		tree1.buildFromSeq(seq1)
-		draw1 = DrawTreeByLink(tree1)
-
-		tree2 = CompleteBinTreeByLink()
-		seq2 = list(chr(x+65) for x in range(0, 10))
-		tree2.buildFromSeq(seq2)
-		draw2 = DrawTreeByLink(tree2)	
-
-		# tree1.insert(13, 30, 'x')
-		# draw1.updateDrawing('insert')
-		# tree2.insert(6, 31, 'y', ndxInSib = 0)
-		# draw2.updateDrawing('insert', insertID = 31)
-
-		tree1.moveToTree(6, tree2, 8)
-		draw1.updateDrawing('redraw')
-		draw2.updateDrawing('redraw')
-
-		# tree1.insert(11, 32, 'z', ndxInSib = 0)
-		# draw1.updateDrawing('insert', insertID = 32)
-		# tree1.deleteDown(deleteID = 5)
-		# draw1.updateDrawing('deleteDown', lastDeletedIDs = tree1.lastDeletedIDs)
-
-	def testExpTree():
-		tree = ExpressionTree()
-		expr = '((1-2-4/5*(1/3))+(2+4+3*5)*5)/7'
-		# ((1+2-4/5*(1/3))+(2+4+3*5)*5)/7
-		# 1,2,+,4,5,/,1,3,/,*,-,2,4,+,3,5,*,+,5,*,+,7,/
-		# expr = '1+2*3'
-		tree.buildFromExpr(expr)
-		draw = DrawTreeByLink(tree)
-		draw.updateDrawing('redraw')
-		value = tree.evaluate(tree._root)
-		print(value)
-
-	def testHeapTree():
-		htree = HeapTree()
-		# htree.buildFromRandom(10)
-		seq = [3, 17, 7, 12, 19, 5, 15, 2, 18, 6]
-		htree.buildFromSeq(seq)
-		htree.minSort(htree._root)
-		draw = DrawTreeByList(htree)
-		htree.heapAppend(4)
-		draw.updateDrawing('redraw')
-		sortedSeq = []
-		while htree.size != 0:
-			sortedSeq.append(htree.headExtract())
-		print(sortedSeq)
-
-	def testBSTree():
-		bsTree = BinSearchTree()
-		seq = [7, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
-		seq = [x for x in range(20, 0, -1)]
-		bsTree.buildFromSeq(seq)
-		bsTree.deleteValue(17)
-		bsTree.deleteValue(19)
-		seq = bsTree.genSortedSeq()
-		print(seq)
-
-	def testAVLTree():
-		avlTree = AVLTree()
-		# seq = [2, 15, 6, 19, 18, 9, 8, 10, 17, 1, 6, 0, 15, 16, 12]
-		seq = [x*2 for x in range(10)]
-		avlTree.buildFromSeq(seq)
-		avlTree.reshapeAVL()
-		draw2 = DrawTreeByLink(avlTree)
-		for x in range(21, 29):
-			avlTree.insertNodeAVL(x)
-		for x in range(-10, 0):
-			avlTree.insertNodeAVL(x)
-		draw2.updateDrawing('redraw')
-		# avlTree.deleteValue(-3)
-		# draw2.updateDrawing('redraw')
-		for x in range(-3, 3):
-			avlTree.deleteValue(x)
-			draw2.updateDrawing('redraw')
-		
 	def testRBTree():
 		rbTree = RBTree()
 		# seq = [randint(0,100) for x in range(23)]
@@ -1371,29 +1284,12 @@ def test():
 		# draw1.updateDrawing('redraw')
 		rbTree.deleteValue(119)
 		rbTree.deleteValue(121)
-		draw1.updateDrawing('redraw')
 		rbTree.deleteValue(126)
 		draw1.updateDrawing('redraw')
+		rbTree.deleteValue(27)
+		draw1.updateDrawing('redraw')
 
-	def testBMTree():
-		btree = BMTree()
-		for x in range(13):
-			btree.insertValue(x*2)
-		draw = DrawTreeByLink(btree)
-		btree.insertValue(3)
-		draw.updateDrawing('redraw')
-		btree.insertValue(5)
-		draw.updateDrawing('redraw')
 
-		# print(btree)
-
-	# testBinTree()
-	# testNormalTree()
-	# testExpTree()
-	# testHeapTree()
-	# testBSTree()
-	# testAVLTree()
-	# testBMTree()
 	testRBTree()
 
 test()
