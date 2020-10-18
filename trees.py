@@ -710,6 +710,8 @@ class BinSearchTree(NormalTree):
 				ny.children[1-n2] = nx
 				ny.parent = pa
 				pa.children[n1] = ny
+				if pa == self._nilNode:
+					self._root = ny
 				return ny
 			else:
 				nx.parent = ny.parent = nz
@@ -780,9 +782,6 @@ class AVLTree(BinSearchTree):
 				else:
 					node = self._adjustAVL(pa)
 					break
-		# self._updateBFTLink(updateFromNode = node)
-		# self._updateIDDict(updateAll = True)
-		# self._updateTreeInfo(updateFromNode = node)
 		self._updateBFTLink(updateAll = True)
 		self._updateIDDict(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
@@ -1291,35 +1290,61 @@ class RBTree(BinSearchTree):
 		self._updateBFTLink(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
 
+class RankRBTree(RBTree):
+	def __init__(self):
+		super().__init__()
+
+	def _initSize(self):
+		node = self._root
+		node.size = self._recGetSize(node)
+
+	def _recGetSize(self, node):
+		if node == self._nilNode:
+			node.size = 0
+		else:
+			node.size = self._recGetSize(node.children[0]) + self._recGetSize(node.children[1]) + 1
+		return node.size
+
+	def _initRank(self):
+		self._root.rank = self._root.children[0].size + 1
+		node = self._root.next
+		while node is not None:
+			if node.ndxInSib == 1:
+				node.rank = node.parent.rank + node.children[0].size + 1
+			elif node.ndxInSib == 0:
+				node.rank = node.parent.rank - node.children[1].size - 1
+			node = node.next
+
+	def _getRank(self, value):
+		node = self.search(value, forRBTree = True)
+		if hasattr(node, 'rank'):
+			return node.rank
+
+	def _sizeToContent(self):
+		for node in self:
+			node.content = str(node.content)
+			node.content += ' s:' + str(node.size)
+
+	def _rankToContent(self):
+		for node in self:
+			node.content +=  ' r:' + str(node.rank)
+		
 def test():
-	def testRBTree():
-		rbTree = RBTree()
-		# seq = [randint(0,100) for x in range(23)]
-		# seq = [2, 15, 6, 19, 18, 9, 8]
-		seq = [2, 6, 19, 16, 10, 22, 18,17]
-		# seq = [56, 79, 35, 64, 46, 85, 53, 94, 27, 25, 4, 45, 91, 100, 98, 80, 97, 83, 9, 62, 48, 96, 24]
+	def testRankRBTree():
+		rrbTree = RankRBTree() 
+		seq = [56, 79, 35, 64, 46, 85, 53, 94, 27, 25, 4, 45, 91, 100, 98, 80, 97, 83, 9, 62, 48, 96, 24]
 		# seq2 = [163, 118, 147, 164, 119, 117, 121, 158, 126, 165, 196, 191, 163, 177, 109, 187, 135, 172, 164, 139]
 		# seq += seq2
 		for x in seq:
-			rbTree.insert(x)
-		draw1 = DrawTreeByLink(rbTree)
-		# # rbTree.insert(17)
-		# rbTree.deleteValue(45)
-		# rbTree.deleteValue(46)
-		# rbTree.deleteValue(9)
-		# rbTree.deleteValue(24)
-		# rbTree.deleteValue(35)
-		# rbTree.deleteValue(53)
-		# rbTree.deleteValue(4)
-		# draw1.updateDrawing('redraw')
-		# rbTree.deleteValue(119)
-		# rbTree.deleteValue(121)
-		# rbTree.deleteValue(126)
-		# draw1.updateDrawing('redraw')
-		# rbTree.deleteValue(27)
+			rrbTree.insert(x)
+		rrbTree._initSize()
+		rrbTree._initRank()
+		print(rrbTree._getRank(45))
+		# rrbTree._sizeToContent()
+		# rrbTree._rankToContent()
+		# draw1 = DrawTreeByLink(rrbTree)
 		# draw1.updateDrawing('redraw')
 
-
-	testRBTree()
+	testRankRBTree()
 
 test()

@@ -106,7 +106,7 @@ class DrawTreeByLink(object):
 		# draw nodes:
 		for curNode in drawList:
 			if isinstance(curNode.children, dict):
-				contentLength = 1
+				contentLength = 1 * len(curNode.content)/4
 			elif isinstance(curNode.children, list):
 				contentLength = max(1, len(curNode.content)) 
 			if curNode.level == 1:

@@ -112,3 +112,30 @@ def test():
 	# testBSTree()
 	# testAVLTree()
 	# testBMTree()
+
+	def testRBTree():
+		rbTree = RBTree()
+		# seq = [randint(0,100) for x in range(23)]
+		# seq = [18, 9, 8, 2, 15, 6, 19]
+		# seq = [2, 6, 19, 16, 10, 22, 18,17]
+		seq = [56, 79, 35, 64, 46, 85, 53, 94, 27, 25, 4, 45, 91, 100, 98, 80, 97, 83, 9, 62, 48, 96, 24]
+		seq2 = [163, 118, 147, 164, 119, 117, 121, 158, 126, 165, 196, 191, 163, 177, 109, 187, 135, 172, 164, 139]
+		seq += seq2
+		for x in seq:
+			rbTree.insert(x)
+		draw1 = DrawTreeByLink(rbTree)
+		# # rbTree.insert(17)
+		rbTree.deleteValue(45)
+		rbTree.deleteValue(46)
+		rbTree.deleteValue(9)
+		rbTree.deleteValue(24)
+		rbTree.deleteValue(35)
+		rbTree.deleteValue(53)
+		rbTree.deleteValue(4)
+		draw1.updateDrawing('redraw')
+		rbTree.deleteValue(119)
+		draw1.updateDrawing('redraw')
+		rbTree.deleteValue(121)
+		rbTree.deleteValue(126)
+		rbTree.deleteValue(27)
+		draw1.updateDrawing('redraw')
