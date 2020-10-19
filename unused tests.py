@@ -122,7 +122,7 @@ def test():
 		seq2 = [163, 118, 147, 164, 119, 117, 121, 158, 126, 165, 196, 191, 163, 177, 109, 187, 135, 172, 164, 139]
 		seq += seq2
 		for x in seq:
-			rbTree.insert(x)
+			rbTree.insertValue(x)
 		draw1 = DrawTreeByLink(rbTree)
 		# # rbTree.insert(17)
 		rbTree.deleteValue(45)

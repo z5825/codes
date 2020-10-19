@@ -106,7 +106,11 @@ class DrawTreeByLink(object):
 		# draw nodes:
 		for curNode in drawList:
 			if isinstance(curNode.children, dict):
-				contentLength = 1 * len(curNode.content)/4
+				contentLength = 1 
+			if hasattr(curNode, 'size'): 
+				contentLength *= 1.5
+			if hasattr(curNode, 'rank'): 
+				contentLength *= 1.5
 			elif isinstance(curNode.children, list):
 				contentLength = max(1, len(curNode.content)) 
 			if curNode.level == 1:
@@ -184,7 +188,11 @@ class DrawTreeByLink(object):
 			(x1, y1), (x2, y2) = curNode.drawRect
 			tmpTag = ('nodes', 'node'+str(curNode.nodeID))
 			self.cv.create_oval(x1, y1, x2, y2, fill = curNode.color, tag = tmpTag)
-			txt = curNode.content
+			txt = str(curNode.content)
+			if hasattr(curNode, 'size'):
+				txt += ' s:' + str(curNode.size)
+			if hasattr(curNode, 'rank'):
+				txt += ' r:' + str(curNode.rank)
 			if isinstance(curNode.content, list):
 				txt = str()
 				for x in curNode.content:

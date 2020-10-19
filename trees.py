@@ -182,7 +182,7 @@ class TreeNodeBM(TreeNode):
 class NormalTree(object):
 	MAXNODE = 10
 	def __init__(self):
-		self._root = self._last = self._nilNode = None
+		self._root = self._last = self._nilLeaf = None
 		self._size = 0
 		self.levelWidth, self.ndxOfLeftmost, self.ndxOfRightmost = {}, {}, {}
 		self.lastDeletedIDs = []
@@ -493,13 +493,13 @@ class BinSearchTree(NormalTree):
 		elif forRBTree == True:
 			while True:
 				if value < curNode.content:
-					if curNode.children[0] != self._nilNode:
+					if curNode.children[0] != self._nilLeaf:
 						curNode = curNode.children[0]
 					else: 
 						n = 0
 						return curNode, n
 				elif value > curNode.content:
-					if curNode.children[1] != self._nilNode:
+					if curNode.children[1] != self._nilLeaf:
 						curNode = curNode.children[1]
 					else: 
 						n = 1
@@ -508,7 +508,7 @@ class BinSearchTree(NormalTree):
 					if forSearch:
 						return curNode, 'found'
 					else: 
-						if curNode.children[0] != self._nilNode:
+						if curNode.children[0] != self._nilLeaf:
 							curNode = curNode.children[0]
 						else: 
 							n = 0
@@ -551,13 +551,13 @@ class BinSearchTree(NormalTree):
 				return closest
 			elif forRBTree == True:   # red node is more preferable
 				left = right = node
-				if node.children[0] != self._nilNode:
+				if node.children[0] != self._nilLeaf:
 					left = node.children[0]
-					while left.children[1] != self._nilNode:
+					while left.children[1] != self._nilLeaf:
 						left = left.children[1]
-				if node.children[1] != self._nilNode:
+				if node.children[1] != self._nilLeaf:
 					right = node.children[1]
-					while right.children[0] != self._nilNode:
+					while right.children[0] != self._nilLeaf:
 						right = right.children[0]
 
 				if left.color == 'red':  closest = left
@@ -566,10 +566,10 @@ class BinSearchTree(NormalTree):
 				elif right.children[0].color == 'red':	closest = right
 				else: closest = left
 	
-				if closest.children[0] != self._nilNode:
+				if closest.children[0] != self._nilLeaf:
 					tmpRoot = self._rotate2(closest, closest.children[0], 'rightRotate')
 					tmpRoot.color, tmpRoot.children[1].color = 'gray', 'red'
-				elif closest.children[1] != self._nilNode:
+				elif closest.children[1] != self._nilLeaf:
 					tmpRoot = self._rotate2(closest, closest.children[1], 'leftRotate')
 					tmpRoot.color, tmpRoot.children[0].color = 'gray', 'red'
 				
@@ -649,7 +649,7 @@ class BinSearchTree(NormalTree):
 			return node2
 		else:
 			pa = node1.parent
-			if pa != self._nilNode:
+			if pa != self._nilHead:
 				n1 = node1.ndxInSib
 			else: n1 = 0
 			n2 = node2.ndxInSib
@@ -658,7 +658,7 @@ class BinSearchTree(NormalTree):
 			else: n3 = 1
 			
 			node2.parent = pa	
-			if pa != self._nilNode:
+			if pa != self._nilHead:
 				pa.children[n1] = node2
 			else: self._root = node2
 			node2.children[n3].parent = node1
@@ -710,7 +710,7 @@ class BinSearchTree(NormalTree):
 				ny.children[1-n2] = nx
 				ny.parent = pa
 				pa.children[n1] = ny
-				if pa == self._nilNode:
+				if pa == self._nilHead:
 					self._root = ny
 				return ny
 			else:
@@ -722,7 +722,7 @@ class BinSearchTree(NormalTree):
 				nz.children[n2], nz.children[1-n2] = ny, nx
 				nz.parent = pa
 				pa.children[n1] = nz
-				if pa == self._nilNode:
+				if pa == self._nilHead:
 					self._root = nz
 				return nz
 
@@ -1213,19 +1213,22 @@ class BMTree(NormalTree):
 class RBTree(BinSearchTree):
 	def __init__(self):
 		super().__init__()
-		self._nilNode = TreeNode(content = None, color = 'gray')
-		self._nilNode.children[0] = self._nilNode.children[1] = self._nilNode 
+		self._nilLeaf = TreeNode(content = None, color = 'gray')
+		self._nilHead = TreeNode(content = None, color = 'gray')
+		self._nilLeaf.children[0] = self._nilLeaf.children[1] = self._nilLeaf 
 
-	def insert(self, value):
+	def insertValue(self, value):
 		if self._root is None:
 			self._root = TreeNode(-1, value, color = 'gray')
-			self._root.parent = self._root.children[0] = self._root.children[1] = self._nilNode
-			return
+			self._root.parent = self._nilHead
+			self._nilHead.children[0] = self._root
+			self._root.children[0] = self._root.children[1] = self._nilLeaf
+			return self._root
 		pa, n = self._findParentAndIndex(value, forRBTree = True)
 		son = TreeNode(-1, value, parent = pa, color = 'red')
-		son.children[0] = son.children[1] = self._nilNode
+		son.children[0] = son.children[1] = self._nilLeaf
 		pa.children[n] = son
-		while pa != self._nilNode and pa.color == 'red':
+		while pa != self._nilHead and pa.color == 'red':
 			_siblings, n = pa.siblings, pa.ndxInSib
 			if _siblings[1-n].color == 'red':
 				pa.color = _siblings[1-n].color = 'gray'
@@ -1244,6 +1247,7 @@ class RBTree(BinSearchTree):
 				
 		self._updateBFTLink(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
+		return son
 
 	def deleteValue(self, value):  
 		nodeToDel = self.search(value, forRBTree = True)
@@ -1251,16 +1255,18 @@ class RBTree(BinSearchTree):
 			return
 		leafNode = self._findClosest(nodeToDel, forRBTree = True)
 		nodeToDel.content = leafNode.content
+		retSwitch = 0
 
 		pa, n = leafNode.parent, leafNode.ndxInSib
 		if leafNode.color == 'red':
 			del leafNode
-			pa.children[n] = self._nilNode
+			pa.children[n] = self._nilLeaf
+			curNode = pa  # for return and update size
 		else:
 			curNode, n = leafNode, leafNode.ndxInSib
 			bro = pa.children[1-n]
 			del leafNode
-			pa.children[n] = self._nilNode
+			pa.children[n] = self._nilLeaf
 			while curNode.color == 'gray' and curNode != self._root:
 				if bro.color == 'red':
 					direction = 'leftRotate' if n==0 else 'rightRotate'
@@ -1284,32 +1290,91 @@ class RBTree(BinSearchTree):
 						tmpRoot.color = paOriColor
 						tmpRoot.children[0].color = tmpRoot.children[1].color = 'gray'
 						curNode = self._root
+						retSwitch = 1
 					
 			curNode.color = 'gray'
 
 		self._updateBFTLink(updateAll = True)
 		self._updateTreeInfo(updateAll = True)
+		if retSwitch == 1:   # for updating 
+			return tmpRoot
+		else:
+			return curNode
 
 class RankRBTree(RBTree):
 	def __init__(self):
 		super().__init__()
+		self._nilLeaf.size = 0
 
 	def _getSize(self, fromNode):
 		fromNode.size = self._recGetSize(fromNode)
 		return fromNode.size
 
 	def _recGetSize(self, node):
-		if node == self._nilNode:
+		if node == self._nilLeaf:
 			node.size = 0
+		elif node == self._nilHead:
+			node.size = self._recGetSize(node.children[0])
 		else:
-			if hasattr(node.children[0], 'size'): 
-				s0 = node.children[0].size
-			else: s0 = self._recGetSize(node.children[0])
-			if hasattr(node.children[1], 'size'):
-				s1 = node.children[1].size
-			else: s1 = self._recGetSize(node.children[1])
-			node.size = s0 + s1 + 1
+			node.size = self._recGetSize(node.children[0]) + self._recGetSize(node.children[1]) + 1
 		return node.size
+
+	def insertValue(self, value):
+		toUpdate = super().insertValue(value)
+		self._getSize(toUpdate)
+		toUpdate = toUpdate.parent
+		while toUpdate != self._nilHead:
+			if hasattr(toUpdate, 'size'):
+				toUpdate.size += 1
+			else:
+				self._getSize(toUpdate)
+			toUpdate = toUpdate.parent
+
+	def deleteValue(self, value):
+		toUpdate = super().deleteValue(value)
+		if toUpdate is not None:
+			self._getSize(toUpdate)
+			toUpdate = toUpdate.parent
+			while toUpdate != self._nilHead:
+				if hasattr(toUpdate, 'size'):
+					toUpdate.size -= 1
+				else:
+					self._getSize(toUpdate)
+				toUpdate = toUpdate.parent
+		
+	def _rotate2(self, node1, node2, direction, forRBTree = False):
+		''' direction : 'leftRotate' or 'rightRotate'  '''
+		tmpRoot = super()._rotate2(node1, node2, direction, forRBTree = forRBTree)
+		n = 0 if direction == 'leftRotate' else 1
+		oriPa = tmpRoot.children[n]
+		if hasattr(oriPa.children[n], 'size'):
+			s = oriPa.children[n].size
+		else:
+			s = self._getSize(oriPa.children[n])
+		tmpRoot.size += s + 1
+		if hasattr(tmpRoot.children[1-n], 'size'):
+			s = tmpRoot.children[1-n].size
+		else:
+			s = self._getSize(tmpRoot.children[1-n])
+		oriPa.size -= s + 1
+		return tmpRoot
+
+	def _rotate3(self, nx, ny, nz, forRBTree = False):
+		tmpRoot = super()._rotate3(nx, ny, nz, forRBTree = forRBTree)
+		for ch in tmpRoot.children.values():
+			if ch != self._nilLeaf:
+				if hasattr(ch.children[0], 'size'): 
+					s0 = ch.children[0].size
+				else:
+					s0 = self._getSize(ch.children[0])
+				if hasattr(ch.children[1], 'size'): 
+					s1 = ch.children[1].size
+				else:
+					s1 = self._getSize(ch.children[1])
+				ch.size = s0 + s1 + 1
+			else: ch.size = 0
+		tmpRoot.size =  tmpRoot.children[0].size + tmpRoot.children[1].size + 1
+		return tmpRoot
 
 	def _initRank(self):
 		self._root.rank = self._root.children[0].size + 1
@@ -1334,64 +1399,24 @@ class RankRBTree(RBTree):
 				n = n.parent
 			node.rank = rank
 			return rank
-
-	def _sizeToContent(self):
-		for node in self:
-			node.content = str(node.content)
-			node.content += ' s:' + str(node.size)
-
-	def _rankToContent(self):
-		for node in self:
-			node.content +=  ' r:' + str(node.rank)
-
-	def _rotate2(self, node1, node2, direction, forRBTree = False):
-		''' direction : 'leftRotate' or 'rightRotate'  '''
-		tmpRoot = super()._rotate2(node1, node2, direction, forRBTree = forRBTree)
-		n = 0 if direction == 'leftRotate' else 1
-		oriPa = tmpRoot.children[n]
-		if hasattr(oriPa.children[n], 'size'):
-			s = oriPa.children[n].size
-		else:
-			s = self._getSize(oriPa.children[n])
-		tmpRoot.size += s + 1
-		if hasattr(tmpRoot.children[1-n], 'size'):
-			s = tmpRoot.children[1-n].size
-		else:
-			s = self._getSize(tmpRoot.children[1-n])
-		oriPa.size -= s + 1
-		return tmpRoot
-
-	def _rotate3(self, nx, ny, nz, forRBTree = False):
-		tmpRoot = super()._rotate3(nx, ny, nz, forRBTree = forRBTree)
-		for ch in tmpRoot.children.values():
-			if ch != self._nilNode:
-				if hasattr(ch.children[0], 'size'): 
-					s0 = ch.children[0].size
-				else:
-					s0 = self._getSize(ch.children[0])
-				if hasattr(ch.children[1], 'size'): 
-					s1 = ch.children[1].size
-				else:
-					s1 = self._getSize(ch.children[1])
-				ch.size = s0 + s1 + 1
-			else: ch.size = 0
-		tmpRoot.size =  tmpRoot.children[0].size + tmpRoot.children[1].size + 1
-		return tmpRoot
 		
 def test():
 	def testRankRBTree():
 		rrbTree = RankRBTree() 
+		# seq = [56, 79, 35, 64, 46, 85, 53, 94, 27, 25]
 		seq = [56, 79, 35, 64, 46, 85, 53, 94, 27, 25, 4, 45, 91, 100, 98, 80, 97, 83, 9, 62, 48, 96, 24]
 		# seq2 = [163, 118, 147, 164, 119, 117, 121, 158, 126, 165, 196, 191, 163, 177, 109, 187, 135, 172, 164, 139]
 		# seq += seq2
 		for x in seq:
-			rrbTree.insert(x)
-		rrbTree._getSize(rrbTree._root)
+			rrbTree.insertValue(x)
+		draw1 = DrawTreeByLink(rrbTree)
+		# rrbTree.insertValue(4)
+		# rrbTree._getSize(rrbTree._root)
 		# rrbTree._initRank()
 		# print(rrbTree._getRank(45))
-		rrbTree._sizeToContent()
-		# rrbTree._rankToContent()
-		draw1 = DrawTreeByLink(rrbTree)
+		rrbTree.deleteValue(53)
+		draw1.updateDrawing('redraw')
+		rrbTree.deleteValue(64)
 		draw1.updateDrawing('redraw')
 
 	testRankRBTree()
