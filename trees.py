@@ -1306,6 +1306,38 @@ class RankRBTree(RBTree):
 		super().__init__()
 		self._nilLeaf.size = 0
 
+	def _rotate2(self, node1, node2, direction, forRBTree = False):
+		''' direction : 'leftRotate' or 'rightRotate'  '''
+		tmpRoot = super()._rotate2(node1, node2, direction, forRBTree = forRBTree)
+		n = 0 if direction == 'leftRotate' else 1
+		oriPa = tmpRoot.children[n]
+		if hasattr(oriPa.children[n], 'size'):
+			s = oriPa.children[n].size
+		else:
+			s = self._getSize(oriPa.children[n])
+		tmpRoot.size += s + 1
+		if hasattr(tmpRoot.children[1-n], 'size'):
+			s = tmpRoot.children[1-n].size
+		else:
+			s = self._getSize(tmpRoot.children[1-n])
+		oriPa.size -= s + 1
+		return tmpRoot
+
+	def _rotate3(self, nx, ny, nz, forRBTree = False):
+		tmpRoot = super()._rotate3(nx, ny, nz, forRBTree = forRBTree)
+		for ch in tmpRoot.children.values():
+			if hasattr(ch.children[0], 'size'): 
+				s0 = ch.children[0].size
+			else:
+				s0 = self._getSize(ch.children[0])
+			if hasattr(ch.children[1], 'size'): 
+				s1 = ch.children[1].size
+			else:
+				s1 = self._getSize(ch.children[1])
+			ch.size = s0 + s1 + 1
+		tmpRoot.size =  tmpRoot.children[0].size + tmpRoot.children[1].size + 1
+		return tmpRoot
+
 	def _getSize(self, fromNode):
 		fromNode.size = self._recGetSize(fromNode)
 		return fromNode.size
@@ -1342,40 +1374,6 @@ class RankRBTree(RBTree):
 					self._getSize(toUpdate)
 				toUpdate = toUpdate.parent
 		
-	def _rotate2(self, node1, node2, direction, forRBTree = False):
-		''' direction : 'leftRotate' or 'rightRotate'  '''
-		tmpRoot = super()._rotate2(node1, node2, direction, forRBTree = forRBTree)
-		n = 0 if direction == 'leftRotate' else 1
-		oriPa = tmpRoot.children[n]
-		if hasattr(oriPa.children[n], 'size'):
-			s = oriPa.children[n].size
-		else:
-			s = self._getSize(oriPa.children[n])
-		tmpRoot.size += s + 1
-		if hasattr(tmpRoot.children[1-n], 'size'):
-			s = tmpRoot.children[1-n].size
-		else:
-			s = self._getSize(tmpRoot.children[1-n])
-		oriPa.size -= s + 1
-		return tmpRoot
-
-	def _rotate3(self, nx, ny, nz, forRBTree = False):
-		tmpRoot = super()._rotate3(nx, ny, nz, forRBTree = forRBTree)
-		for ch in tmpRoot.children.values():
-			if ch != self._nilLeaf:
-				if hasattr(ch.children[0], 'size'): 
-					s0 = ch.children[0].size
-				else:
-					s0 = self._getSize(ch.children[0])
-				if hasattr(ch.children[1], 'size'): 
-					s1 = ch.children[1].size
-				else:
-					s1 = self._getSize(ch.children[1])
-				ch.size = s0 + s1 + 1
-			else: ch.size = 0
-		tmpRoot.size =  tmpRoot.children[0].size + tmpRoot.children[1].size + 1
-		return tmpRoot
-
 	def _initRank(self):
 		self._root.rank = self._root.children[0].size + 1
 		node = self._root.next
@@ -1415,8 +1413,9 @@ def test():
 		# rrbTree._initRank()
 		# print(rrbTree._getRank(45))
 		rrbTree.deleteValue(53)
-		draw1.updateDrawing('redraw')
 		rrbTree.deleteValue(64)
+		draw1.updateDrawing('redraw')
+		rrbTree.deleteValue(79)
 		draw1.updateDrawing('redraw')
 
 	testRankRBTree()
